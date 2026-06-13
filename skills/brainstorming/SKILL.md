@@ -29,8 +29,8 @@ You MUST create a task for each of these items and complete them in order:
 4. **Propose 2-3 approaches** — with trade-offs and your recommendation
 5. **Present design** — in sections scaled to their complexity, get user approval after each section
 6. **Write design doc** — save to `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md` and commit
-7. **Spec self-review** — quick inline check for placeholders, contradictions, ambiguity, scope (see below)
-8. **User reviews written spec** — ask user to review the spec file before proceeding
+7. **Spec self-review (optional)** — quick inline check for placeholders, contradictions, ambiguity, scope; may be folded into the adversarial review (see below)
+8. **Adversarial spec review** — dispatch parallel reviewer subagents from agent-chosen perspectives, fold clear errors directly, surface genuine decisions to the user, commit revisions (see below)
 9. **Transition to implementation** — invoke writing-plans skill to create implementation plan
 
 ## Process Flow
@@ -44,9 +44,12 @@ digraph brainstorming {
     "Propose 2-3 approaches" [shape=box];
     "Present design sections" [shape=box];
     "User approves design?" [shape=diamond];
-    "Write design doc" [shape=box];
-    "Spec self-review\n(fix inline)" [shape=box];
-    "User reviews spec?" [shape=diamond];
+    "Write design doc + commit" [shape=box];
+    "Spec self-review\n(optional, fix inline)" [shape=box];
+    "Adversarial spec review\n(parallel subagents)" [shape=box];
+    "Decisions surfaced?" [shape=diamond];
+    "AskUserQuestion;\nfold answers + clear fixes" [shape=box];
+    "Commit revisions" [shape=box];
     "Invoke writing-plans skill" [shape=doublecircle];
 
     "Explore project context" -> "Visual questions ahead?";
@@ -57,11 +60,14 @@ digraph brainstorming {
     "Propose 2-3 approaches" -> "Present design sections";
     "Present design sections" -> "User approves design?";
     "User approves design?" -> "Present design sections" [label="no, revise"];
-    "User approves design?" -> "Write design doc" [label="yes"];
-    "Write design doc" -> "Spec self-review\n(fix inline)";
-    "Spec self-review\n(fix inline)" -> "User reviews spec?";
-    "User reviews spec?" -> "Write design doc" [label="changes requested"];
-    "User reviews spec?" -> "Invoke writing-plans skill" [label="approved"];
+    "User approves design?" -> "Write design doc + commit" [label="yes"];
+    "Write design doc + commit" -> "Spec self-review\n(optional, fix inline)";
+    "Spec self-review\n(optional, fix inline)" -> "Adversarial spec review\n(parallel subagents)";
+    "Adversarial spec review\n(parallel subagents)" -> "Decisions surfaced?";
+    "Decisions surfaced?" -> "AskUserQuestion;\nfold answers + clear fixes" [label="yes"];
+    "Decisions surfaced?" -> "Commit revisions" [label="no, only clear fixes"];
+    "AskUserQuestion;\nfold answers + clear fixes" -> "Commit revisions";
+    "Commit revisions" -> "Invoke writing-plans skill";
 }
 ```
 
@@ -115,8 +121,8 @@ digraph brainstorming {
 - Use elements-of-style:writing-clearly-and-concisely skill if available
 - Commit the design document to git
 
-**Spec Self-Review:**
-After writing the spec document, look at it with fresh eyes:
+**Spec Self-Review (optional):**
+After writing the spec document, you MAY look at it with fresh eyes before the adversarial review. This step can be skipped or folded into the adversarial review below.
 
 1. **Placeholder scan:** Any "TBD", "TODO", incomplete sections, or vague requirements? Fix them.
 2. **Internal consistency:** Do any sections contradict each other? Does the architecture match the feature descriptions?
@@ -125,12 +131,19 @@ After writing the spec document, look at it with fresh eyes:
 
 Fix any issues inline. No need to re-review — just fix and move on.
 
-**User Review Gate:**
-After the spec review loop passes, ask the user to review the written spec before proceeding:
+**Adversarial Spec Review:**
 
-> "Spec written and committed to `<path>`. Please review it and let me know if you want to make any changes before we start writing out the implementation plan."
+After writing and committing the spec:
 
-Wait for the user's response. If they request changes, make them and re-run the spec review loop. Only proceed once the user approves.
+1. Dispatch **multiple reviewer subagents in parallel**, each attacking the spec from a **different adversarial perspective**. **Choose the set of perspectives yourself** to fit the spec — do not use a fixed panel. Common lenses: completeness/consistency, hidden assumptions & failure modes, scope/YAGNI, integration with existing code. Use `skills/brainstorming/spec-document-reviewer-prompt.md` as the per-reviewer template, parameterized by perspective.
+2. Each reviewer runs at the **same model tier as this conversation** (no model override). Reviewers are read-only, so parallel dispatch is safe.
+3. Fold the findings back:
+   - **Clear error, gap, or contradiction** → fix the spec directly.
+   - **Genuine open decision** → pose it to the user via `AskUserQuestion`.
+4. **Commit the revisions** as a second commit (not an amend) so the review trail stays visible.
+5. Proceed to writing-plans. There is no manual user-review prompt.
+
+The spec is a **transient design artifact**, not the feature's durable documentation. Never link it from shipped code or docs — it is typically deleted shortly after the feature ships.
 
 **Implementation:**
 
@@ -164,52 +177,3 @@ A question about a UI topic is not automatically a visual question. "What does p
 
 If they agree to the companion, read the detailed guide before proceeding:
 `skills/brainstorming/visual-companion.md`
-
----
-
-## Native Task Integration
-
-**REQUIRED:** Use Claude Code's native task tools to create structured tasks during design.
-
-### During Design Validation
-
-After each design section is validated, create a task with structured description:
-
-```yaml
-TaskCreate:
-  subject: "Implement [Component Name]"
-  description: |
-    **Goal:** [What this component produces]
-
-    **Files:**
-    - Create/Modify: [paths identified during design]
-
-    **Acceptance Criteria:**
-    - [ ] [Criterion from design validation]
-    - [ ] [Criterion from design validation]
-
-    **Verify:** [How to test this component works]
-
-    ```json:metadata
-    {"files": ["path/from/design"], "acceptanceCriteria": ["criterion 1", "criterion 2"]}
-    ```
-  activeForm: "Implementing [Component Name]"
-```
-
-These tasks will be refined with steps and verify commands during plan writing. See `skills/shared/task-format-reference.md` for the full format.
-
-Track all task IDs for dependency setup.
-
-### After All Components Validated
-
-Set up dependency relationships:
-
-```yaml
-TaskUpdate:
-  taskId: [dependent-task-id]
-  addBlockedBy: [prerequisite-task-ids]
-```
-
-### Before Handoff
-
-Run `TaskList` to display the complete task structure with dependencies.

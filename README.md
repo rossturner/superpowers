@@ -1,18 +1,16 @@
 # Superpowers Extended for Claude Code
 
-A community-maintained fork of [obra/superpowers](https://github.com/obra/superpowers) specifically for Claude Code users.
+A personal fork of [obra/superpowers](https://github.com/obra/superpowers) (via [pcvelz/superpowers](https://github.com/pcvelz/superpowers)) tuned for Claude Code.
 
 ## Why This Fork Exists
 
-The original Superpowers is designed as a cross-platform toolkit that works across multiple AI CLI tools (Claude Code, Codex, OpenCode, Gemini CLI). Features unique to Claude Code fall outside the scope of the upstream project due to its [cross-platform nature](https://github.com/obra/superpowers/pull/344#issuecomment-3795515617).
+This fork shapes Superpowers around a single-developer workflow on Claude Code. The emphasis is on getting a well-specified plan and then letting the session execute it autonomously, with the harness — not model goodwill — keeping things on rails:
 
-This fork integrates Claude Code-native features into the Superpowers workflow.
-
-### What We Do Differently
-
-- Leverage Claude Code-native features as they're released
-- Community-driven - contributions welcome for any CC-specific enhancement
-- Track upstream - stay compatible with obra/superpowers core workflow
+- **Adversarial spec review** — once a spec is written and committed, several reviewer subagents critique it in parallel, each from a different perspective, before any code is written.
+- **Work on the current branch** — the workflow never switches branches or creates isolated workspaces; everything happens where you already are (usually `master`/`main`).
+- **Parallel per-task review** — each task is reviewed by a spec-compliance reviewer and a code-quality reviewer running side by side.
+- **Autonomous execution** — once a plan is approved, subagent-driven development runs the whole plan to completion without per-task check-ins.
+- **Squash on finish** — completed work is squashed into a single reviewable commit.
 
 ### Current Enhancements
 
@@ -24,37 +22,9 @@ This fork integrates Claude Code-native features into the Superpowers workflow.
 | User-Thrown Gate Enforcement | `userGate` / `user-gate` tag + opt-in hooks force re-validation when Claude closes a user-ordered verification task (see [Recommended Configuration](#recommended-configuration)) |
 | Subagent Model Routing | Opt-in per-task model tiers (`mechanical`/`standard`/`frontier`) route plan-execution subagents to cheaper models (see [Subagent Model Routing](#subagent-model-routing--optional-flow)) |
 | Configurable Commit Strategy | Opt-in `workflow.json` switches plan execution from per-task commits to a single commit at plan end (see [Commit Strategy](#commit-strategy)) |
-
-## Visual Comparison
-
-<table>
-<tr>
-<th>Superpowers (Vanilla)</th>
-<th>Superpowers Extended CC</th>
-</tr>
-<tr>
-<td valign="top">
-
-![Vanilla](docs/screenshots/vanilla-session.png)
-
-- Tasks exist only in markdown plan
-- No runtime task visibility
-- Agent may jump ahead or skip tasks
-- Progress tracked manually by reading output
-
-</td>
-<td valign="top">
-
-![Extended CC](docs/screenshots/extended-cc-session.png)
-
-- **Dependency enforcement** - Task 2 blocked until Task 1 completes (no front-running)
-- **Execution on rails** - Native task manager keeps agent following the plan
-- **Real-time visibility** - User sees actual progress with pending/in_progress/completed states
-- **Session-aware** - TaskList shows what's done, what's blocked, what's next
-
-</td>
-</tr>
-</table>
+| Adversarial Spec Review | Parallel reviewer subagents critique the committed spec from multiple perspectives before planning |
+| Parallel Per-Task Review | Spec-compliance and code-quality reviewers run side by side on every task |
+| Squash on Finish | Completed work is squashed into a single commit with a summary |
 
 ## Installation
 
@@ -62,7 +32,7 @@ This fork integrates Claude Code-native features into the Superpowers workflow.
 
 ```bash
 # Register marketplace
-/plugin marketplace add pcvelz/superpowers
+/plugin marketplace add rossturner/superpowers
 
 # Install plugin
 /plugin install superpowers-extended-cc@superpowers-extended-cc-marketplace
@@ -71,12 +41,12 @@ This fork integrates Claude Code-native features into the Superpowers workflow.
 ### Option 2: Direct URL
 
 ```bash
-/plugin install --source url https://github.com/pcvelz/superpowers.git
+/plugin install --source url https://github.com/rossturner/superpowers.git
 ```
 
 ### Stay Updated (recommended)
 
-Third-party marketplaces don't auto-update by default — installs stay frozen on the original version until you refresh. To get future fixes and new optional hooks automatically:
+Third-party marketplaces don't auto-update by default — installs stay frozen on the installed version until you refresh. To get future fixes and new optional hooks automatically:
 
 1. Run `/plugin`
 2. Open the **Marketplaces** tab
@@ -94,25 +64,21 @@ Run `/superpowers-extended-cc:onboard` for a guided walkthrough of the optional 
 
 ## The Basic Workflow
 
-1. **brainstorming** - Activates before writing code. Refines rough ideas through questions, explores alternatives, presents design in sections for validation. Saves design document.
+1. **brainstorming** — Activates before writing code. Refines a rough idea through questions, explores alternatives, and presents the design in sections for validation. Writes and commits the spec, then runs an adversarial spec review: several reviewer subagents critique the committed spec in parallel, each from a different perspective. Real fixes are folded in; genuine open decisions are surfaced back to you.
 
-2. **using-git-worktrees** - Activates after design approval. Creates isolated workspace on new branch, runs project setup, verifies clean test baseline.
+2. **writing-plans** — Activates with the approved design. Breaks the work into bite-sized tasks (2-5 minutes each), each with exact file paths, complete code, and verification steps. Commits the plan document and halts so you can run `/compact` and then invoke subagent-driven-development.
 
-3. **writing-plans** - Activates with approved design. Breaks work into bite-sized tasks (2-5 minutes each). Every task has exact file paths, complete code, verification steps. *Creates native tasks with dependencies.*
+3. **subagent-driven-development** — Activates with the committed plan. Captures the base SHA, builds the native task list from the plan, then for each task: dispatches an implementer, dispatches a spec-compliance reviewer (cheap/haiku tier) and a code-quality reviewer (orchestrator tier) in parallel, dispatches a fix subagent for any findings (re-running only the reviewer whose findings were addressed), and marks the task complete. Runs autonomously to completion.
 
-4. **subagent-driven-development** or **executing-plans** - Activates with plan. Dispatches fresh subagent per task with two-stage review (spec compliance, then code quality), or executes in batches with human checkpoints.
+4. **test-driven-development** — Activates during implementation. Subagents follow RED-GREEN-REFACTOR within each task: write a failing test, watch it fail, write minimal code, watch it pass, commit. Code written before its test is deleted.
 
-5. **test-driven-development** - Activates during implementation. Enforces RED-GREEN-REFACTOR: write failing test, watch it fail, write minimal code, watch it pass, commit. Deletes code written before tests.
-
-6. **requesting-code-review** - Activates between tasks. Reviews against plan, reports issues by severity. Critical issues block progress.
-
-7. **finishing-a-development-branch** - Activates when tasks complete. Verifies tests, presents options (merge/PR/keep/discard), cleans up worktree.
+5. **finishing-a-development-branch** — Activates when all tasks complete. Dispatches the final whole-implementation review, then squashes the work into a single commit and summarizes it.
 
 **The agent checks for relevant skills before any task.** Mandatory workflows, not suggestions.
 
 ## How Native Tasks Work
 
-When `writing-plans` creates tasks, each task carries structured metadata that survives across sessions and subagent dispatch:
+When `subagent-driven-development` builds the task list from the plan, each task carries structured metadata that survives across sessions and subagent dispatch:
 
 ```yaml
 TaskCreate:
@@ -140,7 +106,7 @@ TaskCreate:
     ```
 ```
 
-The `json:metadata` block is embedded in the description because `TaskGet` returns the description but not the `metadata` parameter. This ensures metadata is always available — for `executing-plans` verification, `subagent-driven-development` dispatch, and `.tasks.json` cross-session resume.
+The `json:metadata` block is embedded in the description because `TaskGet` returns the description but not the `metadata` parameter. This ensures metadata is always available — for `subagent-driven-development` dispatch and `.tasks.json` cross-session resume.
 
 ## User-Thrown Gate Enforcement — Optional Flow
 
@@ -152,30 +118,30 @@ This flow addresses a recurring failure: the user says "add a gate" or "verify i
 
 ### Design principle — don't bombard the user during planning
 
-Users who want questions will say "brainstorm". Users who ask for a gate during planning just want the work done, they don't want a four-question interrogation. So `writing-plans` is silent here: it applies the **stricter definition** of a gate and tags liberally. Better to over-tag and let the execution-time hook filter than to over-question the user mid-plan.
+Users who want questions will say "brainstorm". Users who ask for a gate during planning just want the work done, they don't want a four-question interrogation. So task-list creation is silent here: it applies the **stricter definition** of a gate and tags liberally. Better to over-tag and let the execution-time hook filter than to over-question the user mid-plan.
 
 ### The three layers
 
 | Layer | When | What it does |
 |-------|------|--------------|
-| **Write-plan (silent tagging)** | Plan authoring | Detects gate-language in the brief ("verify", "prove", "gate", "first on one then all", "make sure", "don't proceed until"). Tags the resulting task with `userGate: true` + `tags: ["user-gate"]`. No user questions. Uses the stricter definition: strict user gates AND strict agent gates AND gray-in-between all get tagged. |
-| **Execute-plan (hard trigger via hook)** | Task close / stop | The PostToolUse + Stop hooks fire when a tagged task is closed. The agent must then assess each criterion and choose one of two paths (below). |
-| **`/specify-gate` slash command (dormant unless hook active)** | Execute-plan, only when the agent cannot proceed | Asked 3-4 structured questions to the user that lock down the HOW: observable outcome, proof mechanism, scope, failure policy. Produces a structured verify spec the agent consumes. |
+| **Task creation (silent tagging)** | `subagent-driven-development` builds the task list | Detects gate-language in the brief ("verify", "prove", "gate", "first on one then all", "make sure", "don't proceed until"). Tags the resulting task with `userGate: true` + `tags: ["user-gate"]`. No user questions. Uses the stricter definition: strict user gates AND strict agent gates AND gray-in-between all get tagged. |
+| **Gate check (hard trigger via hook)** | Task close / stop | The PostToolUse + Stop hooks fire when a tagged task is closed. The agent must then assess each criterion and choose one of two paths (below). |
+| **`/specify-gate` slash command (dormant unless hook active)** | At gate-check time, only when the agent cannot proceed | Asks 3-4 structured questions to the user that lock down the HOW: observable outcome, proof mechanism, scope, failure policy. Produces a structured verify spec the agent consumes. |
 
-### Agent decision at execute time
+### Agent decision at gate-check time
 
 When a tagged task comes up, the agent asks itself: **do I know *how* to verify this?**
 
 - **"Verify the `/health` endpoint returns 200"** → the HOW is self-evident. Agent just hits the endpoint, captures the output, posts `AC: <criterion> — PROVEN BY <evidence>`. No slash command needed. The hook sees the proof and passes.
 - **"Check it works"** → the HOW is vague. Agent invokes `/specify-gate`, which asks the user the 3-4 minimal questions, then uses the answers to execute real verification. No silent invention, no inline shortcut.
-- **Write-plan explicitly flagged `requiresUserSpecification: true`** → same path: invoke `/specify-gate`, ask the user.
+- **Task tagged `requiresUserSpecification: true`** → same path: invoke `/specify-gate`, ask the user.
 
-The user is only interrupted at execute time, and only when the alternative is the agent making something up.
+The user is only interrupted at gate-check time, and only when the alternative is the agent making something up.
 
 ### Activation
 
 Register both hooks in `.claude/settings.json` (see "Recommended Configuration" below for the exact JSON). Without them:
-- `writing-plans` still tags gates (harmless extra metadata).
+- Task-list creation still tags gates (harmless extra metadata).
 - `/specify-gate` still exists but is never triggered automatically.
 - Nothing enforces evidence at close — behavior is identical to vanilla.
 
@@ -199,7 +165,7 @@ This flow addresses a cost problem that frontier-priced models (Opus, Fable) mad
 
 **The whole flow is opt-in, with a single switch: `docs/superpowers/model-routing.json` in your project.** The enforcement gates ship with the plugin but are dormant — without that file every check no-ops and behavior is byte-identical to vanilla. No settings to edit, no hooks to register.
 
-### How it works — four harness-enforced layers
+### How it works — three harness-enforced layers
 
 Skills prose is not enforcement; agents skip instructions under load. So every layer here is executed by the harness, not volunteered by the model:
 
@@ -207,8 +173,7 @@ Skills prose is not enforcement; agents skip instructions under load. So every l
 |-------|------|--------------|
 | **Session notice** (`session-start` hook) | Session start | Routing file detected → the tier rules and your mapping are injected into context. The agent starts the session already knowing the rules. |
 | **Plan gate** (`pre-taskcreate-model-tier` hook) | Every `TaskCreate` | A plan task without a valid `"modelTier"` in its `json:metadata` fence is blocked — including plan-shaped tasks (template headers or numbered subjects) that omit the fence entirely; the block message contains the full tier table, so the agent fixes and re-issues without reading anything. |
-| **Dispatch gate** (`pre-agent-model-routing` hook) | Every `Agent` dispatch | While tiered tasks are in progress, allows the union of the in-progress tasks' tier models plus the `standard` reviewer model; blocks anything else and names the correct dispatch per role. A concrete `"model"` pin in task metadata overrides the tier (pin enforcement: see [Recommended Configuration](#recommended-configuration)). |
-| **Handoff guard** (`pre-askuser-handoff-guard` hook) | After `writing-plans` creates tasks | When armed, allows `AskUserQuestion` only if it carries the two mandated options ("Subagent-Driven (this session)" / "Parallel Session (separate)") or marks itself as a mid-plan clarification with the literal token `CLARIFICATION` in the question. Blocks custom menus that bypass the execution-method choice and skip the subagent pipeline. |
+| **Dispatch gate** (`pre-agent-model-routing` hook) | Every `Agent` dispatch | While tiered tasks are in progress, allows the union of the in-progress tasks' tier models plus the `standard` reviewer model; blocks anything else and names the correct dispatch per role. A concrete `"model"` pin in task metadata overrides the tier (pin enforcement: see [Recommended Configuration](#recommended-configuration)). The spec reviewer (cheap/haiku tier) and code-quality reviewer (session/orchestrator tier) are exempt: `subagent-driven-development` marks their dispatches with `[sdd-review]` in the Agent call description, and the gate lets those through at their own tiers. |
 
 All three gates fail open (parse errors never brick a session) and share a kill switch: `SUPERPOWERS_ROUTING_GUARD=0`.
 
@@ -240,7 +205,7 @@ Create `docs/superpowers/model-routing.json` in your project:
 
 ### Role assignments when routing is on
 
-Implementers (and fix re-dispatches) run at their task's tier. Spec and code-quality reviewers run at `standard` — reviewing against explicit criteria is mid-tier work, and review output is the expensive direction at frontier prices. The final whole-plan reviewer runs after all tasks complete (no task in progress, so the dispatch gate does not constrain it) and should stay at session level — one frontier judgment pass per plan. When an implementer reports BLOCKED and needs more reasoning, escalate one tier up by updating the task's metadata transparently — never silently down.
+Implementers (and fix re-dispatches) run at their task's tier. The spec reviewer (cheap/haiku tier) and the code-quality reviewer (session/orchestrator tier) are dispatched at their own tiers and are exempt from the dispatch gate, because `subagent-driven-development` marks their dispatches with `[sdd-review]` in the Agent call description. The final whole-plan reviewer runs after all tasks complete — there is no task in progress, so the dispatch gate does not fire — and should stay at session level: one frontier judgment pass per plan. When an implementer reports BLOCKED and needs more reasoning, escalate one tier up by updating the task's metadata transparently — never silently down.
 
 ---
 
@@ -250,7 +215,7 @@ Implementers (and fix re-dispatches) run at their task's tier. Spec and code-qua
 
 ### Commit Strategy
 
-By default, plan execution commits per task: every plan task ends with its own Commit step, and implementer subagents commit their work before review. That default is unchanged and recommended — frequent commits give fine-grained history and per-task rollback. Projects that prefer a single reviewable commit per plan can opt in to an at-end strategy.
+By default, plan execution commits per task: every plan task ends with its own Commit step, and implementer subagents commit their work before review. That default is recommended — frequent commits give fine-grained history and per-task rollback. Projects that prefer a single reviewable commit per plan can opt in to an at-end strategy.
 
 **The whole flow is opt-in, with a single switch: `docs/superpowers/workflow.json` in your project.** Without that file (or without the key), behavior is byte-identical to the default.
 
@@ -286,15 +251,13 @@ Setup notes:
 - **verification-before-completion** - Ensure it's actually fixed
 
 **Collaboration**
-- **brainstorming** - Socratic design refinement + *native task creation*
-- **writing-plans** - Detailed implementation plans + *native task dependencies*
-- **executing-plans** - Batch execution with checkpoints
+- **brainstorming** - Socratic design refinement + adversarial spec review
+- **writing-plans** - Detailed implementation plans, commit and halt
 - **dispatching-parallel-agents** - Concurrent subagent workflows
 - **requesting-code-review** - Pre-review checklist
 - **receiving-code-review** - Responding to feedback
-- **using-git-worktrees** - Parallel development branches
-- **finishing-a-development-branch** - Merge/PR decision workflow
-- **subagent-driven-development** - Fast iteration with two-stage review (spec compliance, then code quality)
+- **finishing-a-development-branch** - Squash + summary
+- **subagent-driven-development** - Parallel spec + code review per task, squash on finish
 
 **User-Thrown Gates** (optional flow, see "User-Thrown Gate Enforcement" above)
 - **checking-gates** - Do-I-know-HOW self-check for user-gate tasks; runs verify + posts `AC:…PROVEN BY` evidence, or hands off to specifying-gates
@@ -312,17 +275,6 @@ Setup notes:
 - **Evidence over claims** - Verify before declaring success
 
 Read more: [Superpowers for Claude Code](https://blog.fsck.com/2025/10/09/superpowers/)
-
-## Contributing
-
-Contributions for Claude Code-specific enhancements are welcome!
-
-1. Fork this repository
-2. Create a branch for your enhancement
-3. Follow the `writing-skills` skill for creating and testing new skills
-4. Submit a PR
-
-See `skills/writing-skills/SKILL.md` for the complete guide.
 
 ## Recommended Configuration
 
@@ -370,7 +322,7 @@ See the header of `hooks/examples/pre-commit-check-tasks.sh` for how it parses t
 
 ### Force Re-Validation on User-Thrown Gate Close
 
-Optional `PostToolUse` hook that blocks when Claude closes a **user-thrown gate** task without capturing concrete evidence for every acceptance criterion. A user-thrown gate is any task that carries `"userGate": true` or a `"user-gate"` entry in `tags` inside its `json:metadata` fence — set by `writing-plans` when the user explicitly asked for a verification step ("make sure to verify X", "add a gate", "prove it on one, then all").
+Optional `PostToolUse` hook that blocks when Claude closes a **user-thrown gate** task without capturing concrete evidence for every acceptance criterion. A user-thrown gate is any task that carries `"userGate": true` or a `"user-gate"` entry in `tags` inside its `json:metadata` fence — set during task-list creation when the user explicitly asked for a verification step ("make sure to verify X", "add a gate", "prove it on one, then all").
 
 Non-gate tasks pass through silently. The hook only fires when `TaskUpdate` sets status to `completed`.
 
@@ -552,9 +504,9 @@ Skills update automatically when you update the plugin:
 /plugin update superpowers-extended-cc@superpowers-extended-cc-marketplace
 ```
 
-## Upstream Compatibility
+## Upstream
 
-This fork tracks `obra/superpowers` main branch. Changes specific to Claude Code are additive - the core workflow remains compatible.
+Built on [obra/superpowers](https://github.com/obra/superpowers) (via [pcvelz/superpowers](https://github.com/pcvelz/superpowers)). The core Superpowers workflow and skills system come from upstream; the Claude Code-native flows here are layered on top.
 
 ## License
 
@@ -562,5 +514,5 @@ MIT License - see LICENSE file for details
 
 ## Support
 
-- **Issues**: https://github.com/pcvelz/superpowers/issues
-- **Upstream**: https://github.com/obra/superpowers
+- **Issues**: https://github.com/rossturner/superpowers/issues
+- **Upstream**: https://github.com/obra/superpowers (via https://github.com/pcvelz/superpowers)

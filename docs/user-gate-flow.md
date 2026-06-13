@@ -27,12 +27,12 @@ Additional requirement: the whole enforcement apparatus is **opt-in**. Installin
   │                                                              │
   │   • writing-plans detects gate-language and tags the task    │
   │     (userGate:true, tags:["user-gate"]).                     │
-  │   • executing-plans gains one rule: "run user-gate tasks     │
-  │     exactly as specified, capture output per AC, do not      │
-  │     substitute a cheaper check."                             │
+  │   • subagent-driven-development gains one rule: "run         │
+  │     user-gate tasks exactly as specified, capture output     │
+  │     per AC, do not substitute a cheaper check."              │
   │                                                              │
   │   These are wins regardless of hook state. Extra metadata    │
-  │   is harmless. The executing-plans rule costs one paragraph. │
+  │   is harmless. The SDD rule costs one paragraph.             │
   └──────────────────────────────────────────────────────────────┘
 
   ┌──────────────────────────────────────────────────────────────┐
@@ -51,20 +51,20 @@ Additional requirement: the whole enforcement apparatus is **opt-in**. Installin
   └──────────────────────────────────────────────────────────────┘
 ```
 
-### Why keep `/gate-check` out of executing-plans
+### Why keep `/gate-check` out of subagent-driven-development
 
-Earlier drafts tried to put the "do I know HOW?" self-check inline into `executing-plans`. That pollutes a general-purpose skill with enforcement logic only some users want. Extracting it into its own slash command + skill means:
+Putting the "do I know HOW?" self-check inline into `subagent-driven-development` would pollute a general-purpose skill with enforcement logic only some users want. Extracting it into its own slash command + skill means:
 
-- Users without the hook installed get untouched `executing-plans`.
+- Users without the hook installed get untouched `subagent-driven-development`.
 - Users with the hook installed get a focused, scoped handler they can read end-to-end.
-- `executing-plans` keeps its short, generic shape and stays easy to reason about.
+- `subagent-driven-development` keeps its short, generic shape and stays easy to reason about.
 
 ## Hook ON / Hook OFF — the activation contract
 
-| State | What happens when executing-plans hits a user-gate task |
+| State | What happens when subagent-driven-development hits a user-gate task |
 |-------|----------------------------------------------------------|
 | **Hook ON** (registered in `.claude/settings.json`) | Hook stderr nudges the agent to run `/gate-check <task-id>`. That command runs the do-I-know-HOW self-check and either executes the verification with captured evidence or hands off to `/specify-gate`. Task closes only after `AC: <criterion> — PROVEN BY <evidence>` lines are posted. |
-| **Hook OFF** (default) | Regular `executing-plans` flow. The surgical improvements still apply (agent runs the verifyCommand as specified, captures output), but there is no forced routing, no slash command invocation, no interactive questioner. `/gate-check` and `/specify-gate` exist but are never auto-triggered. |
+| **Hook OFF** (default) | Regular `subagent-driven-development` flow. The surgical improvements still apply (agent runs the verifyCommand as specified, captures output), but there is no forced routing, no slash command invocation, no interactive questioner. `/gate-check` and `/specify-gate` exist but are never auto-triggered. |
 
 **Crucial:** installing the plugin does not enable the flow. The flow activates only when you explicitly add the hook to `.claude/settings.json`. Remove the hook entry and the flow deactivates — the slash commands remain available for manual use but no longer run automatically.
 
@@ -187,7 +187,7 @@ User's original brief: *"Build the zoo, verify it works on one instance first, t
 
 No user questions asked. Plan is written and saved.
 
-**Layer 2 — executing-plans reaches Task 7:**
+**Layer 2 — subagent-driven-development reaches Task 7:**
 
 1. Agent marks Task 7 `in_progress`.
 2. Hook is active → agent runs `/gate-check 7`.
@@ -216,7 +216,7 @@ AC: JIT notification fires within 10s — PROVEN BY notification_message diff, t
 
 `TaskUpdate status=completed`. Hook sees the AC evidence in subsequent text, does not block. Gate is genuinely verified.
 
-**If the hook had been OFF:** Step 2 above skips. Agent reads the task description, runs it as specified (surgical main-flow rule), captures output — or quietly substitutes a cheaper check if it feels like it. Exactly the pre-flow behavior, minus one paragraph of discipline added to executing-plans.
+**If the hook had been OFF:** Step 2 above skips. Agent reads the task description, runs it as specified (surgical main-flow rule), captures output — or quietly substitutes a cheaper check if it feels like it. Exactly the pre-flow behavior, minus one paragraph of discipline added to subagent-driven-development.
 
 ## What this does NOT do
 
@@ -224,7 +224,7 @@ AC: JIT notification fires within 10s — PROVEN BY notification_message diff, t
 - Does not force questions during planning. L1 is silent.
 - Does not enforce anything if the hooks aren't installed. Pure opt-in.
 - Does not replace `brainstorming`. Brainstorming explores design; this flow nails down verification mechanics at the latest moment when they matter (execute time).
-- Does not modify `executing-plans` decision logic. Executing-plans gains one surgical paragraph ("run gates as specified") and nothing else.
+- Does not modify `subagent-driven-development` decision logic. Subagent-driven-development gains one surgical paragraph ("run gates as specified") and nothing else.
 
 ## Open work
 

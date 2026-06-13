@@ -6,8 +6,8 @@
 # - Triggers on Bash tool calls containing "git commit"
 # - Parses the session transcript for TaskCreate/TaskUpdate calls
 # - Blocks only when a task has status "in_progress". Pending tasks pass
-#   through so per-task commit flows (subagent-driven-development,
-#   executing-plans) can commit one task at a time.
+#   through so the per-task commit flow (subagent-driven-development) can
+#   commit one task at a time.
 
 INPUT=$(cat)
 

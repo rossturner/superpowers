@@ -176,7 +176,7 @@ assert_stderr_contains "names got model" "model='opus'"
 assert_stderr_contains "roles header" "Allowed per docs/superpowers/model-routing.json:"
 assert_stderr_contains "implementer role line" "implementer / fix dispatches → the model of the task they serve"
 assert_stderr_contains "allowed set names haiku" "one of: haiku"
-assert_stderr_contains "reviewer role line" "spec & code-quality reviewers → model: sonnet"
+assert_stderr_contains "reviewer role line" "spec & code-quality reviewers → mark the dispatch description with [sdd-review] (exempt)"
 assert_stderr_contains "final reviewer role line" "final whole-plan reviewer (runs after all tasks complete) → no in_progress task, this gate won't fire"
 echo ""
 

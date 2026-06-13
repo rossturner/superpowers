@@ -1,17 +1,17 @@
 ---
 name: checking-gates
-description: Use when picking up a user-gate task OR when a hook demands re-validation. Runs the "do I know HOW?" self-check; if the HOW is clear, executes the verification and posts evidence; if not, hands off to specifying-gates. Kept deliberately separate from executing-plans so that without the opt-in hook, the main flow stays untouched.
+description: Use when picking up a user-gate task OR when a hook demands re-validation. Runs the "do I know HOW?" self-check; if the HOW is clear, executes the verification and posts evidence; if not, hands off to specifying-gates. Kept deliberately separate from subagent-driven-development so that without the opt-in hook, the main flow stays untouched.
 ---
 
 # Checking User-Thrown Gates
 
-## Why this skill is separate from executing-plans
+## Why this skill is separate from subagent-driven-development
 
-User-gate enforcement is an **opt-in flow**. When the opt-in hook is not registered, executing-plans runs unchanged — no extra checks, no extra context, no extra questions. When the hook IS registered, it routes user-gate tasks through this skill. Keeping the decision logic in a separate skill means:
+User-gate enforcement is an **opt-in flow**. When the opt-in hook is not registered, subagent-driven-development runs unchanged — no extra checks, no extra context, no extra questions. When the hook IS registered, it routes user-gate tasks through this skill. Keeping the decision logic in a separate skill means:
 
 - Users who don't want the flow get zero friction.
 - Users who do want it get a focused, scoped handler.
-- `executing-plans` stays short and readable.
+- `subagent-driven-development` stays short and readable.
 
 ## When to invoke
 
@@ -21,7 +21,7 @@ Any one of:
 2. A hook fired stderr telling you to run `/gate-check <task-id>`.
 3. The user manually ran `/gate-check <task-id>`.
 
-If none of these apply, return to executing-plans without running this skill.
+If none of these apply, return to subagent-driven-development without running this skill.
 
 **Announce at start:** "I'm using the checking-gates skill to verify Task N's acceptance criteria."
 
@@ -75,7 +75,7 @@ If any of the three is missing for any criterion, HOW is NOT clear → Path A.
 
 ## What NOT to do
 
-- Do NOT modify executing-plans' behavior from inside this skill. This skill is a leaf — it returns control when done.
+- Do NOT modify subagent-driven-development's behavior from inside this skill. This skill is a leaf — it returns control when done.
 - Do NOT invoke `EnterPlanMode` or `ExitPlanMode`.
 - Do NOT substitute a cheaper verification for the one specified. If you think the spec is wrong, reopen via `/specify-gate` — don't walk around it.
 - Do NOT close the task if any criterion lacks concrete evidence. "Looks fine" is not evidence.
@@ -84,5 +84,5 @@ If any of the three is missing for any criterion, HOW is NOT clear → Path A.
 
 - **Invoked from:** the PostToolUse / PreToolUse user-gate hook; or `/gate-check` slash command.
 - **May hand off to:** `specifying-gates` (Path A).
-- **Returns to:** `executing-plans` (or wherever it was invoked from) after TaskUpdate.
+- **Returns to:** `subagent-driven-development` (or wherever it was invoked from) after TaskUpdate.
 - **References:** `skills/shared/task-format-reference.md` for metadata schema.

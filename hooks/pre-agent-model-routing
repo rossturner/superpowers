@@ -3,10 +3,14 @@
 #
 # Ships plugin-level (registered via hooks/hooks.json) but stays dormant unless
 # the project opts in by creating docs/superpowers/model-routing.json. With the
-# file present, each Agent dispatch's model parameter must agree with the
-# in_progress task's resolved tier — or with the reviewer tier ("standard"),
-# because spec & code-quality reviewer subagents are dispatched while the same
-# task is still in_progress.
+# file present, each implementer/fix Agent dispatch's model parameter must agree
+# with the in_progress task's resolved tier.
+#
+# Reviewer dispatches are exempt. subagent-driven-development marks its spec and
+# code-quality reviewers (and review-driven fix agents) with "[sdd-review]" in
+# the Agent call's description; those run at tiers chosen at dispatch (cheap spec
+# reviewer, orchestrator-tier code reviewer) and pass regardless of the
+# in_progress task's tier.
 #
 # model-routing.json maps tier names to model strings, e.g.:
 #   {"mechanical":"haiku","standard":"sonnet","frontier":"inherit"}
@@ -21,6 +25,8 @@
 #   3. subagent_type set and != "general-purpose" → allow (custom agent types —
 #      llama/Explore/code-reviewer/etc. — have their own cost profiles and often
 #      no model param; only implementer/reviewer-grade dispatches are routed).
+#   3b. Dispatch description contains "[sdd-review]" → allow (reviewer & review-fix
+#      dispatches run at tiers set explicitly at dispatch).
 #   4. Routing file absent or unparseable → allow (dormant / fail-open).
 #      Lookup: <cwd>/docs/superpowers/model-routing.json first, else
 #      $HOME/.claude/superpowers/model-routing.json (user-level default).
@@ -62,8 +68,8 @@ INPUT=$(cat)
 # separators are not an option here — bash 3.2 uses \x01 internally
 # (CTLESC) and IFS=$'\x01' silently fails to split on stock macOS bash.
 # jq parse failure fails the assignment → ERR trap → allow.
-FIELDS=$(echo "$INPUT" | jq -r '[(.tool_name // ""), (.tool_input.model // ""), (.tool_input.subagent_type // ""), (.cwd // ""), (.transcript_path // "")] | map(tostring | gsub("\\r|\\n"; " ")) | .[]' 2>/dev/null)
-{ IFS= read -r TOOL_NAME; IFS= read -r AGENT_MODEL; IFS= read -r AGENT_TYPE; IFS= read -r CWD; IFS= read -r TRANSCRIPT_PATH; } <<< "$FIELDS" || true
+FIELDS=$(echo "$INPUT" | jq -r '[(.tool_name // ""), (.tool_input.model // ""), (.tool_input.subagent_type // ""), (.tool_input.description // ""), (.cwd // ""), (.transcript_path // "")] | map(tostring | gsub("\\r|\\n"; " ")) | .[]' 2>/dev/null)
+{ IFS= read -r TOOL_NAME; IFS= read -r AGENT_MODEL; IFS= read -r AGENT_TYPE; IFS= read -r DISPATCH_DESC; IFS= read -r CWD; IFS= read -r TRANSCRIPT_PATH; } <<< "$FIELDS" || true
 
 [[ "$TOOL_NAME" != "Agent" ]] && { trace "?" "skip" "tool=$TOOL_NAME"; echo "$ALLOW"; exit 0; }
 
@@ -71,6 +77,15 @@ FIELDS=$(echo "$INPUT" | jq -r '[(.tool_name // ""), (.tool_input.model // ""), 
 # dispatches (subagent_type "general-purpose", or absent = the default).
 if [[ -n "$AGENT_TYPE" && "$AGENT_TYPE" != "general-purpose" ]]; then
     trace "?" "skip" "custom-agent-type-exempt type=$AGENT_TYPE"
+    echo "$ALLOW"; exit 0
+fi
+
+# Reviewer & review-fix dispatches are exempt: subagent-driven-development marks
+# them with "[sdd-review]" in the dispatch description. They run at tiers chosen
+# at dispatch (cheap spec reviewer, orchestrator-tier code reviewer) and must not
+# be constrained by the in_progress task's tier.
+if [[ "$DISPATCH_DESC" == *"[sdd-review]"* ]]; then
+    trace "?" "skip" "review-dispatch-exempt"
     echo "$ALLOW"; exit 0
 fi
 
@@ -229,8 +244,8 @@ trace "$TASK_ID" "parsed" "tiers=$TIERS_DISPLAY"
 
 # Build the allowed model set: the UNION of every in_progress task's resolved
 # tier (bounded parallel dispatch means a dispatch may serve any of them),
-# PLUS the reviewer tier ("standard") because spec & code-quality reviewers
-# run at standard while their task is in_progress.
+# PLUS the "standard" tier as a general allowance for standard-tier dispatches.
+# (Reviewers are already exempt above via the [sdd-review] marker.)
 ALLOWED=()
 IFS=',' read -r -a TIER_ARR <<< "$TIERS_CSV"
 for tier in ${TIER_ARR[@]+"${TIER_ARR[@]}"}; do
@@ -297,7 +312,7 @@ PRIMARY_RESOLVED="${ALLOWED[0]}"
     echo
     echo "Allowed per $ROUTING_LABEL:"
     echo "  - implementer / fix dispatches → the model of the task they serve (allowed set above)"
-    echo "  - spec & code-quality reviewers → model: $STANDARD_DISPLAY"
+    echo "  - spec & code-quality reviewers → mark the dispatch description with [sdd-review] (exempt)"
     echo "  - final whole-plan reviewer (runs after all tasks complete) → no in_progress task, this gate won't fire"
     echo
     echo "Options:"

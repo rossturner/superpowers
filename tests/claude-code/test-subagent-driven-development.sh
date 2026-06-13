@@ -136,12 +136,18 @@ fi
 
 echo ""
 
-# Test 8: Verify worktree requirement
-echo "Test 8: Worktree requirement..."
+# Test 8: Verify parallel per-task review
+echo "Test 8: Parallel per-task review..."
 
-output=$(run_claude "What workflow skills are required before using subagent-driven-development? List any prerequisites or required skills." 120)
+skill_text=$(cat "$SCRIPT_DIR/../../skills/subagent-driven-development/SKILL.md")
 
-if assert_contains "$output" "using-git-worktrees\|worktree" "Mentions worktree requirement"; then
+if assert_contains "$skill_text" "in PARALLEL\|in parallel" "Reviewers dispatched in parallel"; then
+    : # pass
+else
+    exit 1
+fi
+
+if assert_contains "$skill_text" "spec reviewer.*code.*reviewer\|spec.*review.*quality.*review\|spec compliance.*code quality" "Spec and code quality reviewers covered"; then
     : # pass
 else
     exit 1
@@ -149,12 +155,12 @@ fi
 
 echo ""
 
-# Test 9: Verify main branch warning
-echo "Test 9: Main branch red flag..."
+# Test 9: Works on the current branch (including main)
+echo "Test 9: Current-branch policy..."
 
 output=$(run_claude "In subagent-driven-development, is it okay to start implementation directly on the main branch?" 120)
 
-if assert_contains "$output" "worktree\|feature.*branch\|not.*main\|never.*main\|avoid.*main\|don't.*main\|consent\|permission" "Warns against main branch"; then
+if assert_contains "$output" "yes\|current branch\|fine\|okay\|work on.*branch\|don't switch\|do not switch\|never switch" "Confirms working on the current branch"; then
     : # pass
 else
     exit 1

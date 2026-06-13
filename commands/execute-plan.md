@@ -1,5 +1,5 @@
 ---
-description: Execute plan in batches with review checkpoints
+description: Execute an implementation plan via subagent-driven development
 ---
 
-Invoke the superpowers-extended-cc:executing-plans skill and follow it exactly as presented to you
+Invoke the superpowers-extended-cc:subagent-driven-development skill and follow it exactly as presented to you
