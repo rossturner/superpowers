@@ -1,13 +1,13 @@
 {
-  "name": "superpowers-extended-cc-marketplace",
-  "description": "Marketplace for Superpowers Extended CC - Claude Code-specific enhancements",
+  "name": "superpowers-ross-marketplace",
+  "description": "Marketplace for Superpowers (Ross's fork) - Claude Code-specific enhancements",
   "owner": {
     "name": "pcvelz",
     "email": "pcvelz@users.noreply.github.com"
   },
   "plugins": [
     {
-      "name": "superpowers-extended-cc",
+      "name": "superpowers-ross",
       "description": "Claude Code-specific fork of Superpowers with native task management and CC-specific enhancements",
       "version": "7.0.0-dev",
       "source": "./",

@@ -1,5 +1,5 @@
 {
-  "name": "superpowers-extended-cc",
+  "name": "superpowers-ross",
   "version": "5.4.0",
   "description": "Claude Code-specific fork of Superpowers with native task management and CC-specific enhancements",
   "author": {
@@ -31,9 +31,9 @@
   ],
   "skills": "./skills/",
   "interface": {
-    "displayName": "Superpowers Extended CC",
+    "displayName": "Superpowers (Ross's fork)",
     "shortDescription": "Planning, TDD, debugging, and delivery workflows for Claude Code (fork)",
-    "longDescription": "Use Superpowers Extended CC to guide agent work through brainstorming, implementation planning, test-driven development, systematic debugging, parallel execution, code review, and finish-the-branch workflows. Claude Code-specific fork with native task management.",
+    "longDescription": "Use Superpowers (Ross's fork) to guide agent work through brainstorming, implementation planning, test-driven development, systematic debugging, parallel execution, code review, and finish-the-branch workflows. Claude Code-specific fork with native task management.",
     "developerName": "pcvelz (fork of Jesse Vincent's Superpowers)",
     "category": "Coding",
     "capabilities": [

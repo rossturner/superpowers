@@ -1,5 +1,5 @@
 {
-  "name": "superpowers-extended-cc",
+  "name": "superpowers-ross",
   "description": "Claude Code-specific fork of Superpowers with native task management and CC-specific enhancements",
   "version": "6.0.3-dev",
   "contextFileName": "GEMINI.md"

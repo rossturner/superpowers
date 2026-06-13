@@ -68,7 +68,7 @@ digraph process {
     "More tasks remain?" [shape=diamond];
     "Dispatch final whole-implementation code reviewer" [shape=box];
     "Fold final-review fixes via subagent" [shape=box];
-    "Use superpowers-extended-cc:finishing-a-development-branch (squash + summary)" [shape=box style=filled fillcolor=lightgreen];
+    "Use superpowers-ross:finishing-a-development-branch (squash + summary)" [shape=box style=filled fillcolor=lightgreen];
 
     "Print loop summary to self" -> "Capture base SHA";
     "Capture base SHA" -> "Read plan, create tasks (full text + metadata)";
@@ -86,7 +86,7 @@ digraph process {
     "More tasks remain?" -> "Dispatch implementer subagent (skills/subagent-driven-development/implementer-prompt.md)" [label="yes"];
     "More tasks remain?" -> "Dispatch final whole-implementation code reviewer" [label="no"];
     "Dispatch final whole-implementation code reviewer" -> "Fold final-review fixes via subagent";
-    "Fold final-review fixes via subagent" -> "Use superpowers-extended-cc:finishing-a-development-branch (squash + summary)";
+    "Fold final-review fixes via subagent" -> "Use superpowers-ross:finishing-a-development-branch (squash + summary)";
 }
 ```
 
@@ -218,7 +218,7 @@ Write the persistence file co-located with the plan. If the plan is `docs/superp
 }
 ```
 
-Any new session resumes with `/superpowers-extended-cc:subagent-driven-development <plan-path>`, which reads `.tasks.json` and continues from where it left off.
+Any new session resumes with `/superpowers-ross:subagent-driven-development <plan-path>`, which reads `.tasks.json` and continues from where it left off.
 
 ## Dispatching with Metadata
 
@@ -373,9 +373,9 @@ This keeps cross-session resume correct — without it, a new session loading `.
 ## Integration
 
 **Workflow skills:**
-- **superpowers-extended-cc:writing-plans** — Creates the plan this skill executes
-- **superpowers-extended-cc:requesting-code-review** — Code review template for reviewer subagents
-- **superpowers-extended-cc:finishing-a-development-branch** — Squashes and summarizes after all tasks
+- **superpowers-ross:writing-plans** — Creates the plan this skill executes
+- **superpowers-ross:requesting-code-review** — Code review template for reviewer subagents
+- **superpowers-ross:finishing-a-development-branch** — Squashes and summarizes after all tasks
 
 **Subagents should use:**
-- **superpowers-extended-cc:test-driven-development** — Subagents follow TDD for each task
+- **superpowers-ross:test-driven-development** — Subagents follow TDD for each task
