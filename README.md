@@ -504,9 +504,63 @@ Skills update automatically when you update the plugin:
 /plugin update superpowers-ross@superpowers-ross-marketplace
 ```
 
-## Upstream
+## Divergence from Upstream
 
-Built on [obra/superpowers](https://github.com/obra/superpowers) (via [pcvelz/superpowers](https://github.com/pcvelz/superpowers)). The core Superpowers workflow and skills system come from upstream; the Claude Code-native flows here are layered on top.
+Built on [obra/superpowers](https://github.com/obra/superpowers); the immediate upstream is [pcvelz/superpowers](https://github.com/pcvelz/superpowers). The core Superpowers workflow and skills system come from upstream; the changes below are layered on top.
+
+To pull upstream updates:
+
+```bash
+git remote add upstream https://github.com/pcvelz/superpowers.git   # one-time
+git fetch upstream
+git merge upstream/main   # resolve conflicts with the per-area policy below
+```
+
+Every area lists the files it touches and how to resolve a conflict when upstream changes the same file. The `git diff --stat upstream/main..HEAD` is the authoritative full list; this section is the map.
+
+### Behavioral changes — keep this fork's version; reconcile genuine upstream improvements by hand
+
+**Brainstorming — adversarial spec review.** After the spec is written and committed, parallel reviewer subagents critique it from perspectives the spec-writer chooses, at the main-conversation model tier; clear fixes are folded in, genuine decisions surfaced via AskUserQuestion. There is no manual user spec-review step, and no task creation here.
+- `skills/brainstorming/SKILL.md`, `skills/brainstorming/spec-document-reviewer-prompt.md`
+
+**Writing-plans — write, commit, halt.** The plan is written and committed, then the skill stops (the expectation is `/compact`, then subagent-driven-development). It creates no native tasks and no `.tasks.json`; the final plan task updates durable docs where needed. Spec and plan are transient artifacts.
+- `skills/writing-plans/SKILL.md`
+
+**Subagent-driven-development — the core rewrite.** Prints a numbered self-summary of its own steps at start; captures the base SHA; builds the native task list from the plan here (not in earlier skills); works on the current branch and never switches; dispatches the spec-compliance reviewer (cheap/haiku tier) and code-quality reviewer (orchestrator tier) in parallel; re-runs only the reviewer whose findings were addressed; dispatches a subagent for any review follow-up; runs autonomously to completion.
+- `skills/subagent-driven-development/SKILL.md` (the most-diverged file — merge carefully)
+
+**Finishing-a-development-branch — squash on the current branch.** Verifies tests, reads `baseSha` from `.tasks.json`, auto-squashes the work to one commit when the commits are contiguous/linear/unpushed, otherwise asks; no worktree teardown.
+- `skills/finishing-a-development-branch/SKILL.md`
+
+### Removals — keep deleted; discard upstream edits to these paths
+
+**Git worktrees — removed entirely.** This fork never uses worktrees; it works on the current branch.
+- Deleted: `skills/using-git-worktrees/SKILL.md`, `tests/claude-code/test-worktree-native-preference.sh`
+- If upstream adds worktree references elsewhere, strip them.
+
+**executing-plans skill — removed.** Its task-creation role moved into subagent-driven-development.
+- Deleted: `skills/executing-plans/SKILL.md`, `tests/skill-triggering/prompts/executing-plans.txt`
+- Repointed to subagent-driven-development: `commands/execute-plan.md`, `skills/checking-gates/SKILL.md`, `skills/specifying-gates/SKILL.md`, `docs/user-gate-flow.md`, `tests/skill-triggering/run-all.sh`
+
+**AskUserQuestion handoff guard — removed.** Reviewers are exempted from model routing via a `[sdd-review]` dispatch-description marker instead of a handoff hook.
+- Deleted: `hooks/pre-askuser-handoff-guard`, `tests/claude-code/test-handoff-guard.sh`
+- Modified: `hooks/hooks.json` (dropped the AskUserQuestion matcher), `hooks/pre-agent-model-routing` (added the `[sdd-review]` exemption), `docs/model-routing-flow.md`
+
+### Identity & branding — keep this fork's values; re-apply the rename after merging
+
+The plugin is renamed `superpowers-extended-cc` → `superpowers-ross` (marketplace likewise), with "Superpowers (Ross's fork)" display names. Because the plugin name is also the `superpowers-ross:` skill-invocation prefix, it appears throughout `skills/`, `commands/`, and docs.
+- `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `.codex-plugin/plugin.json`, `.cursor-plugin/plugin.json`, `gemini-extension.json`, `README.md`, `CLAUDE.md`, plus every `superpowers-ross:` reference
+- After merging upstream, re-apply the rename in one sweep:
+  ```bash
+  git grep -Il 'superpowers-extended-cc' | xargs sed -i 's/superpowers-extended-cc/superpowers-ross/g'
+  ```
+
+### Additive / mechanical — low conflict risk
+
+- **Design spec** (transient, deleted once shipped): `docs/superpowers/specs/2026-06-13-personal-workflow-fork-design.md` — additive.
+- **`.gitignore`**: adds `.idea/`.
+- **Tests updated to match the behavior above**: `tests/claude-code/test-subagent-driven-development.sh` (parallel-review + current-branch assertions), `test-model-routing-hook.sh` (`[sdd-review]` exemption), `test-fork-validation.sh`, and the `superpowers-ross:` prefix in `tests/subagent-driven-dev/*`.
+- **Rename-only edits** elsewhere: `commands/*`, `hooks/session-start`, `hooks/pre-taskcreate-model-tier`, `skills/systematic-debugging/SKILL.md`, `skills/writing-skills/*`, `skills/using-superpowers/references/codex-tools.md` — conflicts here are almost always just the prefix; re-run the sweep above.
 
 ## License
 
