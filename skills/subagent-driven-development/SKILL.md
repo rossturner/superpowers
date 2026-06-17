@@ -59,7 +59,7 @@ digraph process {
         "Implementer asks questions?" [shape=diamond];
         "Answer questions, re-dispatch" [shape=box];
         "Implementer implements, tests, commits, self-reviews" [shape=box];
-        "Dispatch spec reviewer (haiku) + code quality reviewer (orchestrator tier) in PARALLEL" [shape=box];
+        "Dispatch spec reviewer (haiku) + code quality reviewer (sonnet) in PARALLEL" [shape=box];
         "Either review found issues?" [shape=diamond];
         "Dispatch fix subagent; re-run ONLY the addressed reviewer" [shape=box];
         "TaskUpdate: mark completed + sync .tasks.json" [shape=box];
@@ -77,8 +77,8 @@ digraph process {
     "Implementer asks questions?" -> "Answer questions, re-dispatch" [label="yes"];
     "Answer questions, re-dispatch" -> "Dispatch implementer subagent (skills/subagent-driven-development/implementer-prompt.md)";
     "Implementer asks questions?" -> "Implementer implements, tests, commits, self-reviews" [label="no"];
-    "Implementer implements, tests, commits, self-reviews" -> "Dispatch spec reviewer (haiku) + code quality reviewer (orchestrator tier) in PARALLEL";
-    "Dispatch spec reviewer (haiku) + code quality reviewer (orchestrator tier) in PARALLEL" -> "Either review found issues?";
+    "Implementer implements, tests, commits, self-reviews" -> "Dispatch spec reviewer (haiku) + code quality reviewer (sonnet) in PARALLEL";
+    "Dispatch spec reviewer (haiku) + code quality reviewer (sonnet) in PARALLEL" -> "Either review found issues?";
     "Either review found issues?" -> "Dispatch fix subagent; re-run ONLY the addressed reviewer" [label="yes"];
     "Dispatch fix subagent; re-run ONLY the addressed reviewer" -> "Either review found issues?" [label="re-review"];
     "Either review found issues?" -> "TaskUpdate: mark completed + sync .tasks.json" [label="no, both approve"];
@@ -232,7 +232,7 @@ When dispatching an implementer subagent:
 After the implementer reports DONE, dispatch BOTH reviewers concurrently — they are read-only, so parallel dispatch is safe:
 
 - **Spec compliance reviewer** — confirms the code matches the spec, nothing missing and nothing extra. Dispatch at the **cheap / mechanical / haiku tier** (explicit model override).
-- **Code quality reviewer** — confirms the implementation is well-built. Dispatch at the **same tier as this orchestrator** (no model override). For a small, mechanical, or otherwise trivial task you MAY downgrade or skip the code quality reviewer.
+- **Code quality reviewer** — confirms the implementation is well-built. Dispatch at the **sonnet tier** (explicit model override) — this is the default for code review, even when this orchestrator is running on opus. Only escalate to opus in the rare case of a genuinely subtle, design-heavy change where sonnet's review would plausibly miss something; the vast majority of tasks do not warrant it. For a small, mechanical, or otherwise trivial task you MAY downgrade to haiku or skip the code quality reviewer.
 
 Mark every reviewer and review-fix dispatch with `[sdd-review]` in the Agent call's `description`. That exempts them from the model-routing gate (see `hooks/pre-agent-model-routing`), so their dispatch-time tiers apply regardless of any active routing file.
 
@@ -243,11 +243,11 @@ Mark every reviewer and review-fix dispatch with `[sdd-review]` in the Agent cal
 
 ## Model Selection (implementer)
 
-Use the least powerful model that can handle each implementer task, to conserve cost and increase speed.
+Use the least powerful model that can handle each implementer task, to conserve cost and increase speed. **Sonnet is the default ceiling** — favor sonnet (or cheaper) for implementation, and reserve opus for the rare task that genuinely cannot be done without it.
 
-- Touches 1-2 files with a complete spec → cheap model. Most well-specified implementation tasks are mechanical.
-- Touches multiple files with integration concerns → standard model.
-- Requires design judgment or broad codebase understanding → most capable model.
+- Touches 1-2 files with a complete spec → cheap model (haiku). Most well-specified implementation tasks are mechanical.
+- Touches multiple files with integration concerns → sonnet.
+- Requires design judgment or broad codebase understanding → still default to sonnet. Escalate to opus only when sonnet has actually struggled (e.g. a BLOCKED return) or the task is unmistakably beyond it — this should be uncommon.
 
 ## Handling Implementer Status
 
@@ -261,7 +261,7 @@ Implementer subagents report one of four statuses:
 
 **BLOCKED:** The implementer cannot complete the task. Assess the blocker:
 1. If it's a context problem, provide more context and re-dispatch with the same model.
-2. If the task requires more reasoning, re-dispatch with a more capable model.
+2. If the task requires more reasoning, re-dispatch one tier up (typically haiku → sonnet). Reach for opus only if sonnet has also returned BLOCKED.
 3. If the task is too large, break it into smaller pieces.
 4. If the plan itself is wrong, escalate to the human.
 
@@ -276,7 +276,7 @@ Before ANY execution-time AskUserQuestion — plan-scripted or relayed from an i
 ## End of Run
 
 After the last task is complete:
-1. Dispatch the final whole-implementation code reviewer (orchestrator tier) over the entire diff.
+1. Dispatch the final whole-implementation code reviewer (sonnet tier; opus only in the rare design-heavy case) over the entire diff.
 2. Fold any fixes it requires via a subagent.
 3. Invoke `finishing-a-development-branch`, passing both the base SHA (or the `.tasks.json` path that holds it) and the plan/spec path — it squashes the work and summarizes.
 
@@ -304,7 +304,7 @@ You: "User level (~/.config/superpowers/hooks/)"
 Implementer:
   - Implemented install-hook command, added tests (5/5), self-review added --force, committed
 
-[Dispatch spec reviewer (haiku) + code quality reviewer (orchestrator tier) in parallel]
+[Dispatch spec reviewer (haiku) + code quality reviewer (sonnet) in parallel]
 Spec reviewer: ✅ Spec compliant
 Code reviewer: ✅ Approved
 [Mark Task 1 complete, sync .tasks.json]
