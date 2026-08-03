@@ -99,6 +99,49 @@ else
     echo "  [PASS] No docs/plans/ in tracked files"
 fi
 
+# 7. Coarse task granularity.
+# Fork divergence: a task is one outcome, and neither file count nor commit count
+# bounds it. Upstream sizes a task at one commit and asks for bite-sized tasks, so
+# a merge re-introduces the phrases below. Anchored on short strings so an upstream
+# rewording still trips the check.
+echo "Test 7: Coarse task granularity..."
+GRANULARITY_FAIL=0
+check_absent() {
+    if grep -qi "$1" "$REPO_ROOT/$2" 2>/dev/null; then
+        echo "  [FAIL] $2 contains '$1' — upstream's fine-grained task sizing crept back in"
+        GRANULARITY_FAIL=$((GRANULARITY_FAIL + 1))
+    fi
+}
+for f in skills/writing-plans/SKILL.md commands/write-plan.md; do
+    check_absent "bite-sized" "$f"
+done
+# README's Divergence section names "bite-sized" on purpose, to say what a merge
+# must strip, so assert on the workflow description instead of the whole file.
+if ! grep -q "one task per outcome" "$REPO_ROOT/README.md" 2>/dev/null; then
+    echo "  [FAIL] README.md no longer describes writing-plans as one task per outcome"
+    GRANULARITY_FAIL=$((GRANULARITY_FAIL + 1))
+fi
+check_absent "Commit Boundary = Task Boundary" skills/shared/task-format-reference.md
+check_absent "more than one concern" skills/shared/task-format-reference.md
+check_absent "more than one concern" skills/writing-plans/SKILL.md
+check_absent "bullet points" skills/shared/task-format-reference.md
+# The three tests and the TDD subsection must survive the same merge.
+for phrase in "**Merge.**" "**Split.**" "**Ceiling.**" "TDD Within Tasks"; do
+    if ! grep -qF "$phrase" "$REPO_ROOT/skills/shared/task-format-reference.md" 2>/dev/null; then
+        echo "  [FAIL] skills/shared/task-format-reference.md lost '$phrase'"
+        GRANULARITY_FAIL=$((GRANULARITY_FAIL + 1))
+    fi
+done
+if ! grep -q "Merge Pass" "$REPO_ROOT/skills/writing-plans/SKILL.md" 2>/dev/null; then
+    echo "  [FAIL] skills/writing-plans/SKILL.md lost the Merge Pass section"
+    GRANULARITY_FAIL=$((GRANULARITY_FAIL + 1))
+fi
+if [ $GRANULARITY_FAIL -gt 0 ]; then
+    FAILED=$((FAILED + GRANULARITY_FAIL))
+else
+    echo "  [PASS] Task granularity rules intact"
+fi
+
 # Summary
 echo ""
 if [ $FAILED -eq 0 ]; then

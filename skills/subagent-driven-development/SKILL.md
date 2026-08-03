@@ -138,7 +138,10 @@ Conversation memory does not survive compaction. In real sessions, controllers t
   line names your plan file, tasks with a `Task <N>: complete` line are DONE
   — do not re-dispatch them; resume at the first task without one. A task
   whose last line is a fix round is mid-loop: resume the loop at the next
-  round. A ledger whose first line names a different plan file — or a stray
+  round. A task with a `Task <N>: dispatched (base <base7>)` line and no
+  `complete` line is mid-flight: take its BASE from that line, because
+  current HEAD may already hold part of that task's commits. A ledger whose
+  first line names a different plan file — or a stray
   ledger at the old flat path `.superpowers/sdd/progress.md` — is another
   plan's progress: leave it in place and start your own, fresh.
 - Create the ledger with its identity as the first line:
@@ -295,10 +298,14 @@ When dispatching an implementer subagent:
 
 Use the least powerful model that can handle each role, to conserve cost and increase speed. **Sonnet is the default ceiling** — favor sonnet or cheaper, and reserve opus for the rare case that genuinely cannot be done without it.
 
-**Task complexity signals (implementation tasks):**
-- Touches 1-2 files with a complete spec → cheap model (haiku). Most well-specified implementation tasks are mechanical.
-- Touches multiple files with integration concerns → sonnet.
-- Requires design judgment or broad codebase understanding → still default to sonnet. Escalate to opus only when sonnet has actually struggled (e.g. a BLOCKED return) or the task is unmistakably beyond it — this should be uncommon.
+**Task complexity signals (implementation tasks).** Select on what the task's steps contain. File count selects nothing — a well-specified task spanning twenty files is still transcription.
+- The steps hold the code to write → cheap model (haiku), at any size. The implementation is transcription plus testing. Most tasks in a well-specified plan are this.
+- The steps describe the change in prose → sonnet. Wall-clock and context cost scale with how many turns a subagent takes, and the cheapest models routinely take 2-3× the turns on multi-step work described in prose, costing more overall. Sonnet is the floor for an implementer working from prose.
+- The task requires design judgment or broad codebase understanding → still default to sonnet. Escalate to opus only when sonnet has actually struggled (e.g. a BLOCKED return) or the task is unmistakably beyond it — this should be uncommon.
+
+Single-file mechanical fixes take the cheapest tier.
+
+**Turn count beats token price.** Wall-clock and context cost scale with how many turns a subagent takes, for every role in this skill. A cheaper model that takes 2-3× the turns costs more overall, so read the tier signals above as a floor on capability rather than a race to the bottom.
 
 **Spec compliance reviewer:** the cheap/mechanical tier. Comparison work, not judgment work.
 
@@ -310,15 +317,13 @@ Use the least powerful model that can handle each role, to conserve cost and inc
 
 **Always specify the model explicitly when dispatching a subagent.** An omitted model inherits your session's model — often the most capable and most expensive — which silently defeats this section.
 
-**Turn count beats token price.** Wall-clock and context cost scale with how many turns a subagent takes, and the cheapest models routinely take 2-3× the turns on multi-step work — costing more overall. Use a mid-tier model as the floor for implementers working from prose descriptions. When the task's plan text contains the complete code to write, the implementation is transcription plus testing: use the cheapest tier for that implementer. Single-file mechanical fixes also take the cheapest tier.
-
 ## The Task Loop
 
 Everything you paste into a dispatch prompt — and everything a subagent prints back — stays resident in your context for the rest of the session and is re-read on every later turn. Hand artifacts over as files.
 
 ### 1. Dispatch the implementer
 
-Record BASE (`git rev-parse HEAD`) before dispatching — the review package and fix-round diffs need it.
+Record BASE (`git rev-parse HEAD`) before dispatching — the review package and fix-round diffs need it. Append it to the ledger in the same message: `Task <N>: dispatched (base <base7>)`. A task commits several times, so a compaction partway through leaves you resuming at a HEAD that already holds part of this task's own commits; a BASE re-derived there scopes the review package to the tail and hides the rest of the task from both reviewers.
 
 - **Task brief:** before dispatching an implementer, run this skill's
   `scripts/task-brief PLAN_FILE N` — it extracts the task's full text to a
@@ -363,7 +368,7 @@ Implementer subagents report one of four statuses. Handle each appropriately:
 **BLOCKED:** The implementer cannot complete the task. Assess the blocker:
 1. If it's a context problem, provide more context and re-dispatch with the same model
 2. If the task requires more reasoning, re-dispatch one tier up (typically haiku → sonnet). Reach for opus only if sonnet has also returned BLOCKED.
-3. If the task is too large, break it into smaller pieces
+3. If the task is too large, report the task, the implementer's report file and the plan text to your human partner. A plan written under the current granularity rule holds one task per outcome and no smaller pieces to fall back on, so amending the plan is the human's decision
 4. If the plan itself is wrong, escalate to the human
 
 **Never** ignore an escalation or force the same model to retry without changes. If the implementer said it's stuck, something needs to change.
@@ -398,6 +403,14 @@ Mark every reviewer and review-fix dispatch with `[sdd-review]` in the Agent cal
   call. Use the BASE you recorded before dispatching the implementer —
   never `HEAD~1`, which silently truncates multi-commit tasks. Never
   dispatch a reviewer without a diff file.
+- Check the package's length before dispatching: `wc -l <printed path>`.
+  Past 2000 lines a reviewer's Read truncates the file by default, and both
+  reviewer prompts tell it to read the package once and to leave the changed
+  files alone, so it returns a verdict on the part it read with no sign the
+  rest existed. A package over 2000 lines means the task outgrew what the
+  plan predicted: append `Task <N>: oversize package (<L> lines)` to the
+  ledger and report the task to your human partner before dispatching
+  either reviewer.
 - The global-constraints block you hand each reviewer is its attention
   lens. Copy the binding requirements verbatim from the plan's Global
   Constraints section or the spec: exact values, exact formats, and the

@@ -118,30 +118,18 @@ TaskCreate:
 
 ### The Right Scope
 
-A task is **a coherent unit of work that produces a testable, committable outcome**.
+A task is **one outcome**. A plan names its outcomes in the Architecture paragraph of its header, and that paragraph is the authority on what counts as one. The File Structure section lists the files each outcome touches.
 
-**Scope test — ask these questions:**
-1. Does this task produce something I can verify independently? (if no → too small)
-2. Does it touch more than one concern? (if yes → too big)
-3. Would it get its own commit? (if no → too small; if commit message needs bullet points → too big)
+Three tests decide where a task begins and ends.
 
-### Examples
+**Merge.** Adjacent tasks serving one outcome are one task. A task that cannot be verified on its own serves another task's outcome, and it merges into that task.
 
-| Scope | Example | Why |
-|-------|---------|-----|
-| Too small | "Write failing test for X" | Not independently verifiable — needs implementation |
-| Too small | "Run pytest" | Verification step, not a task |
-| Too small | "Add import statement" | Part of a larger change |
-| **Right** | "Implement WebSocket protocol layer with tests" | Coherent unit, testable, one commit |
-| **Right** | "Add JIT selection prompt to Pre-flight" | Single concern, verifiable, one commit |
-| **Right** | "Create optimizer test class for SOC 73% case" | Complete test suite for one scenario |
-| Too big | "Implement entire auth system" | Multiple concerns, multiple commits |
-| Too big | "Fix all /hame output issues" | Multiple independent changes |
+**Split.** A task holding two outcomes is two tasks, where each outcome stands on its own and the plan makes sense with either one built alone.
+
+**Ceiling.** A task is too large when its Goal needs more than one sentence to state the outcome, or when the code in its steps runs past roughly 600 lines. A reviewer reads its diff as one file, and `git diff -U10` turns one changed line into about three lines of that file, so past 600 lines of code the reviewer reads part of the change and returns a verdict on the part it read.
+
+A task spans as many files and as many commits as its outcome takes. Neither file count nor commit count bounds a task. Every task costs a brief file, an implementer dispatch, a review package and two reviewer dispatches at execution, and those dispatches run in series, so a decomposition finer than the outcomes buys nothing and is paid for in wall-clock time.
 
 ### TDD Within Tasks (Not Across Tasks)
 
 TDD cycles (write test → verify fail → implement → verify pass) happen WITHIN a single task, not as separate tasks. The task is "Implement X with tests" — the TDD steps are execution detail, not task boundaries.
-
-### Commit Boundary = Task Boundary
-
-Each task should produce exactly one commit. If a task needs multiple commits, split it. If separate tasks share a commit, merge them.

@@ -20,7 +20,7 @@ The saving this change buys is a saving in serial dispatches. Merged tasks run l
 
 ## The size rule
 
-A task is one outcome. A plan names its outcomes in the Architecture paragraph of its header, and that paragraph is the authority. The File Structure section lists the files each outcome touches.
+A task is one outcome. A plan names its outcomes in the Architecture paragraph of its header, and that paragraph is the authority. The File Structure section lists the files each outcome touches. The plan header template in `skills/writing-plans/SKILL.md` asks Architecture for two or three sentences about the approach, so it is amended to ask for the outcomes by name.
 
 Three tests replace the scope test.
 
@@ -28,7 +28,9 @@ Three tests replace the scope test.
 
 **Split.** A task holding two outcomes is two tasks, where each outcome stands on its own and the plan makes sense with either one built alone.
 
-**Ceiling.** A task is too large when its Goal needs more than one sentence to state the outcome, or when its acceptance criteria need more than one verification command to check. Both are visible while the plan is written.
+**Ceiling.** A task is too large when its Goal needs more than one sentence to state the outcome, or when the code in its steps runs past roughly 600 lines. The plan's steps hold the code, so both are visible while the plan is written. The 600-line figure comes from the reviewer's reading limit: a reviewer reads its diff as one file, `git diff -U10` turns one changed line into about three lines of that file, and Read truncates a file at 2000 lines by default.
+
+`subagent-driven-development` carries the same check where the diff exists. It runs `wc -l` on the path `scripts/review-package` prints, and a package over 2000 lines means the task outgrew what the plan predicted. The controller records the size in the ledger and reports the task to the human before dispatching either reviewer, because a verdict on the first part of a truncated package is worse than no verdict.
 
 ## Commits
 
@@ -93,6 +95,8 @@ The reviewers, the progress ledger, the plan-scoped workspace and the `.tasks.js
 ## Deferred
 
 The five-round fix cap in `skills/subagent-driven-development/SKILL.md:438` is per task and counts rounds across both reviewers. Larger tasks draw more findings per review against a fixed budget, so the cap trips more often. The cap stays at five through this change. One plan runs under the new sizes, and the run decides whether the cap moves.
+
+The cheap tier now applies to a transcription task of any size. Turn count grows with the number of files an implementer writes even when the plan holds the code, so a cheap model on a large transcription task may take enough turns to cost more than a mid-tier one. The same run decides whether the cheap tier needs a size bound after all.
 
 ## Testing
 
