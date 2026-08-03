@@ -64,19 +64,29 @@ else
     echo "  [PASS] No RELEASE-NOTES.md"
 fi
 
-# 5. Native task sections exist in key skills
-echo "Test 5: Native task integration present..."
+# 5. Task creation lives ONLY in subagent-driven-development.
+# Fork divergence: brainstorming and writing-plans create no native tasks — that
+# role was absorbed into subagent-driven-development. Upstream keeps re-adding a
+# "Native Task Integration" section to both on merge, so this asserts both
+# directions: absent where the fork removed it, present where the fork moved it.
+echo "Test 5: Task creation confined to subagent-driven-development..."
 NATIVE_FAIL=0
-for skill in writing-plans brainstorming dispatching-parallel-agents; do
-    if ! grep -q "Native Task" "$REPO_ROOT/skills/$skill/SKILL.md" 2>/dev/null; then
-        echo "  [FAIL] skills/$skill/SKILL.md missing Native Task section"
+for skill in writing-plans brainstorming; do
+    if grep -q "Native Task" "$REPO_ROOT/skills/$skill/SKILL.md" 2>/dev/null; then
+        echo "  [FAIL] skills/$skill/SKILL.md has a Native Task section — upstream's task creation crept back in"
+        NATIVE_FAIL=$((NATIVE_FAIL + 1))
+    fi
+done
+for skill in subagent-driven-development dispatching-parallel-agents; do
+    if ! grep -qi "TaskCreate\|Native Task" "$REPO_ROOT/skills/$skill/SKILL.md" 2>/dev/null; then
+        echo "  [FAIL] skills/$skill/SKILL.md missing task-creation content"
         NATIVE_FAIL=$((NATIVE_FAIL + 1))
     fi
 done
 if [ $NATIVE_FAIL -gt 0 ]; then
     FAILED=$((FAILED + NATIVE_FAIL))
 else
-    echo "  [PASS] Native task sections present"
+    echo "  [PASS] Task creation confined to subagent-driven-development"
 fi
 
 # 6. No docs/plans/ in tracked files (development artifacts)

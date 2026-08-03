@@ -1,61 +1,127 @@
 # Spec Compliance Reviewer Prompt Template
 
-Use this template when dispatching a spec compliance reviewer subagent.
+Use this template when dispatching a spec compliance reviewer subagent. This
+fork splits the task review into two reviewers dispatched **in parallel** —
+this one and [code-quality-reviewer-prompt.md](code-quality-reviewer-prompt.md).
+Both are read-only, so concurrent dispatch is safe. Neither waits on the other.
 
-**Purpose:** Verify implementer built what was requested (nothing more, nothing less)
+**Purpose:** Verify the implementer built what was requested — nothing more,
+nothing less.
+
+**Tier:** the cheap/mechanical tier. Spec compliance is comparison work, not
+judgment work.
 
 ```
-Task tool (general-purpose):
-  description: "Review spec compliance for Task N"
+Subagent (general-purpose):
+  description: "[sdd-review] Spec compliance for Task N"
+  model: [MODEL — REQUIRED: the cheap/mechanical tier per SKILL.md Model
+         Selection; an omitted model silently inherits the session's most
+         expensive one]
   prompt: |
-    You are reviewing whether an implementation matches its specification.
+    You are reviewing whether one task's implementation matches its
+    requirements. This is a task-scoped gate, not a merge review — a broad
+    whole-branch review happens separately after all tasks are complete.
+    Another reviewer is judging code quality on the same diff in parallel;
+    quality is not your job. Judge only what was asked for against what was
+    built.
 
     ## What Was Requested
 
-    [FULL TEXT of task requirements]
+    Read the task brief: [BRIEF_FILE]
 
-    ## What Implementer Claims They Built
+    Global constraints from the spec/design that bind this task:
+    [GLOBAL_CONSTRAINTS]
 
-    [From implementer's report]
+    ## What the Implementer Claims They Built
 
-    ## CRITICAL: Do Not Trust the Report
+    Read the implementer's report: [REPORT_FILE]
 
-    The implementer finished suspiciously quickly. Their report may be incomplete,
-    inaccurate, or optimistic. You MUST verify everything independently.
+    ## Diff Under Review
 
-    **DO NOT:**
-    - Take their word for what they implemented
-    - Trust their claims about completeness
-    - Accept their interpretation of requirements
+    **Base:** [BASE_SHA]
+    **Head:** [HEAD_SHA]
+    **Diff file:** [DIFF_FILE]
 
-    **DO:**
-    - Read the actual code they wrote
-    - Compare actual implementation to requirements line by line
-    - Check for missing pieces they claimed to implement
-    - Look for extra features they didn't mention
+    Read the diff file once — it contains the commit list, a stat summary,
+    and the full diff with surrounding context, and it is your view of the
+    change. The diff's context lines ARE the changed files: do not Read a
+    changed file separately unless a hunk you must judge is cut off
+    mid-function — and say so in your report. Do not re-run git commands.
+    If the diff file is missing, fetch the diff yourself:
+    `git diff --stat [BASE_SHA]..[HEAD_SHA]` and `git diff [BASE_SHA]..[HEAD_SHA]`.
+    Do not crawl the broader codebase.
 
-    ## Your Job
+    Your review is read-only on this checkout. Do not mutate the working
+    tree, the index, HEAD, or branch state in any way.
 
-    Read the implementation code and verify:
+    ## Do Not Trust the Report
 
-    **Missing requirements:**
-    - Did they implement everything that was requested?
-    - Are there requirements they skipped or missed?
-    - Did they claim something works but didn't actually implement it?
+    Treat the implementer's report as unverified claims about the code. It
+    may be incomplete, inaccurate, or optimistic. Verify every claim against
+    the diff. A requirement the report says is done, but which no hunk in the
+    diff implements, is a missing requirement — not a verified one.
 
-    **Extra/unneeded work:**
-    - Did they build things that weren't requested?
-    - Did they over-engineer or add unnecessary features?
-    - Did they add "nice to haves" that weren't in spec?
+    ## Tests
 
-    **Misunderstandings:**
-    - Did they interpret requirements differently than intended?
-    - Did they solve the wrong problem?
-    - Did they implement the right feature but wrong way?
+    Do not re-run the suite; the implementer already reported its results.
+    Test *coverage* judgments belong to the code-quality reviewer. A test the
+    brief required and the diff does not contain is yours: that is a missing
+    requirement.
 
-    **Verify by reading code, not by trusting report.**
+    ## Your Job: Spec Compliance
 
-    Report:
-    - ✅ Spec compliant (if everything matches after code inspection)
-    - ❌ Issues found: [list specifically what's missing or extra, with file:line references]
+    Compare the diff against What Was Requested:
+
+    - **Missing:** requirements they skipped, missed, or claimed without
+      implementing
+    - **Extra:** features that weren't requested, over-engineering, unneeded
+      "nice to haves"
+    - **Misunderstood:** right feature built the wrong way, wrong problem
+      solved
+
+    If a requirement cannot be verified from this diff alone (it lives in
+    unchanged code or spans tasks), report it as a ⚠️ item instead of
+    broadening your search.
+
+    Your final message is the report itself: begin directly with the verdict.
+    Every line is a verdict, a finding with file:line, or a check you ran —
+    no preamble, no process narration, no closing summary.
+
+    ## Calibration
+
+    A finding is a real deviation from the brief, cited to file:line. If the
+    plan or brief explicitly mandates something you would otherwise call a
+    defect, that IS a finding — report it labeled plan-mandated. The plan's
+    authorship does not grade its own work; the human decides.
+
+    ## Output Format
+
+    ### Spec Compliance
+
+    - ✅ Spec compliant | ❌ Issues found: [what's missing/extra/misunderstood,
+      with file:line references]
+    - ⚠️ Cannot verify from diff: [requirements you could not verify from the
+      diff alone, and what the controller should check — report alongside the
+      ✅/❌ verdict for everything you could verify]
 ```
+
+**Placeholders:**
+- `[MODEL]` — REQUIRED: the cheap/mechanical tier per SKILL.md Model Selection
+- `[BRIEF_FILE]` — REQUIRED: the task brief file (`scripts/task-brief PLAN N`
+  prints the path; same file the implementer worked from)
+- `[GLOBAL_CONSTRAINTS]` — the binding requirements copied verbatim from
+  the plan's Global Constraints section or the spec: exact values, formats,
+  and stated relationships between components (not process rules — those
+  are already in this template)
+- `[REPORT_FILE]` — REQUIRED: the file the implementer wrote its detailed
+  report to
+- `[BASE_SHA]` — commit before this task
+- `[HEAD_SHA]` — current commit
+- `[DIFF_FILE]` — REQUIRED: the path the controller wrote the review
+  package to (`scripts/review-package PLAN_FILE BASE HEAD` prints the unique
+  path it wrote; the package never enters the controller's context)
+
+**Reviewer returns:** Spec Compliance verdict (✅/❌/⚠️) with file:line findings.
+
+**Dispatch marker:** the Agent call's `description` must contain `[sdd-review]`
+so the model-routing gate exempts this dispatch (see `hooks/pre-agent-model-routing`).

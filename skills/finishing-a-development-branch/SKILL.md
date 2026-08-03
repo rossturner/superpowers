@@ -76,3 +76,13 @@ Summarize what was done overall — the feature, the key changes, and the final 
 - Force-push without an explicit request
 - Guess the base SHA
 - Add a merge/PR/keep/discard menu, or any prompt beyond the squash question above
+
+## Common Rationalizations
+
+| Excuse | Reality |
+|--------|---------|
+| "Tests passed earlier this session" | Run the suite on the tree you are about to squash. A green run only proves the tree it ran on. |
+| "The push was rejected — force-push will fix it" | A rejected push means the remote moved. Investigate; force-push only on the user's explicit request. |
+| "I can infer the base SHA from the log" | Read `baseSha` from `.tasks.json`. A guessed anchor squashes the wrong range, and the range is unrecoverable once reset. |
+| "The range looks close enough to linear" | The three conditions are checks, not impressions. Run them; if any fails, ask. |
+| "They'll want a PR next, I'll offer" | This skill squashes and summarizes. Integration is a separate decision the user raises when they want it. |

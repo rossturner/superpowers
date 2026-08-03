@@ -428,7 +428,7 @@ echo "Test 11: plan.md ↔ tasks.json banner/metadata consistency"
 CHECKER='
 md="$1"; tj="$2"
 banners=$(grep -c "USER-ORDERED GATE" "$md" 2>/dev/null || echo 0)
-gates=$(jq "[.tasks[] | select(.metadata.userGate == true)] | length" "$tj" 2>/dev/null || echo 0)
+gates=$({ jq "[.tasks[] | select(.metadata.userGate == true)] | length" "$tj" 2>/dev/null || echo 0; } | tr -d "\r")
 if [ "$banners" != "$gates" ]; then
     echo "MISMATCH: plan banners=$banners vs tasks.json userGate=$gates"
     exit 1
@@ -479,11 +479,13 @@ fi
 echo ""
 
 echo "Test 12: Step 1 detector regression — bare 'validate' must not fire"
-# Writing-plans Step 1 is prose-instructed, not shell-implemented, so we can't
-# drive an LLM here. Instead, assert the skill source text itself encodes the
-# tightened trigger rule — this catches regressions that loosen Step 1 back to
-# "any bucket matches" without running a live plan-writing session.
-SKILL="$REPO_ROOT/skills/writing-plans/SKILL.md"
+# Step 1 is prose-instructed, not shell-implemented, so we can't drive an LLM
+# here. Instead, assert the skill source text itself encodes the tightened
+# trigger rule — this catches regressions that loosen Step 1 back to "any
+# bucket matches" without running a live session.
+# Fork divergence: gate detection lives in subagent-driven-development, which
+# builds the task list; writing-plans creates no tasks and so carries no Step 1.
+SKILL="$REPO_ROOT/skills/subagent-driven-development/SKILL.md"
 if grep -q "A \*\*Verbs\*\* match ALONE is not enough" "$SKILL" \
    && grep -q "Verbs.*match co-occurs with EITHER a Scope or a Proof" "$SKILL"; then
     echo "  [PASS] Step 1 trigger rule requires Verbs + (Scope|Proof) or Nouns|Scope match"

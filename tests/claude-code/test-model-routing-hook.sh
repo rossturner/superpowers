@@ -468,5 +468,273 @@ assert_stderr_contains "native format block names resolved tier model" "model 's
 assert_stderr_contains "native format block names got model" "model='haiku'"
 echo ""
 
+echo "Test 31: native IDs offset from creation order (the e8c703dc collision) → bind by real id"
+# Reproduces the false-block: 4 tasks were created+closed earlier in the session,
+# so this plan's tasks get native ids 5..9 (visible only in the TaskCreate
+# results). The FRONTIER task is native #5; the standard harness is native #9 —
+# but it is the 5th TaskCreate, so the old creation-order counter resolved
+# taskId=5 to it (standard) and blocked the legitimate frontier (opus) dispatch.
+cat > "$WORK/preseeded-ids.jsonl" <<'EOF'
+{"type":"assistant","message":{"content":[{"type":"tool_use","id":"tc1","name":"TaskCreate","input":{"subject":"Root-cause frontier task","description":"**Goal:** root cause.\n\n```json:metadata\n{\"modelTier\":\"frontier\",\"files\":[],\"verifyCommand\":\"true\",\"acceptanceCriteria\":[]}\n```"}}]}}
+{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"tc1","content":"Task #5 created successfully: Root-cause frontier task"}]}}
+{"type":"assistant","message":{"content":[{"type":"tool_use","id":"tc2","name":"TaskCreate","input":{"subject":"Filler mechanical 2","description":"**Goal:** m.\n\n```json:metadata\n{\"modelTier\":\"mechanical\",\"files\":[],\"verifyCommand\":\"true\",\"acceptanceCriteria\":[]}\n```"}}]}}
+{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"tc2","content":"Task #6 created successfully: Filler mechanical 2"}]}}
+{"type":"assistant","message":{"content":[{"type":"tool_use","id":"tc3","name":"TaskCreate","input":{"subject":"Filler mechanical 3","description":"**Goal:** m.\n\n```json:metadata\n{\"modelTier\":\"mechanical\",\"files\":[],\"verifyCommand\":\"true\",\"acceptanceCriteria\":[]}\n```"}}]}}
+{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"tc3","content":"Task #7 created successfully: Filler mechanical 3"}]}}
+{"type":"assistant","message":{"content":[{"type":"tool_use","id":"tc4","name":"TaskCreate","input":{"subject":"Filler mechanical 4","description":"**Goal:** m.\n\n```json:metadata\n{\"modelTier\":\"mechanical\",\"files\":[],\"verifyCommand\":\"true\",\"acceptanceCriteria\":[]}\n```"}}]}}
+{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"tc4","content":"Task #8 created successfully: Filler mechanical 4"}]}}
+{"type":"assistant","message":{"content":[{"type":"tool_use","id":"tc5","name":"TaskCreate","input":{"subject":"Eviction test harness","description":"**Goal:** harness.\n\n```json:metadata\n{\"modelTier\":\"standard\",\"files\":[],\"verifyCommand\":\"true\",\"acceptanceCriteria\":[]}\n```"}}]}}
+{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"tc5","content":"Task #9 created successfully: Eviction test harness"}]}}
+{"type":"assistant","message":{"content":[{"type":"tool_use","id":"tu1","name":"TaskUpdate","input":{"taskId":"5","status":"in_progress"}}]}}
+EOF
+INPUT=$(printf '{"tool_name":"Agent","tool_input":{"subagent_type":"general-purpose","model":"opus","prompt":"go"},"transcript_path":"%s","cwd":"%s"}' \
+    "$WORK/preseeded-ids.jsonl" "$WORK/project")
+rc=$(run_hook "$INPUT")
+assert "frontier task (native #5) in_progress, opus dispatch → allow (was wrongly blocked)" "0" "$rc"
+INPUT=$(printf '{"tool_name":"Agent","tool_input":{"subagent_type":"general-purpose","prompt":"go"},"transcript_path":"%s","cwd":"%s"}' \
+    "$WORK/preseeded-ids.jsonl" "$WORK/project")
+rc=$(run_hook "$INPUT")
+assert "frontier task (native #5) in_progress, no model param → allow" "0" "$rc"
+echo ""
+
+echo "Test 32: authoritative path still BLOCKS a genuine mismatch + names the real id"
+# Single task, native #5, mechanical, in_progress, result present → authoritative
+# path. opus is neither the task tier (haiku) nor reviewer (sonnet) → block, and
+# the message must reference the real id (#5), not a creation-order index (#1).
+cat > "$WORK/bound-mismatch.jsonl" <<'EOF'
+{"type":"assistant","message":{"content":[{"type":"tool_use","id":"tc1","name":"TaskCreate","input":{"subject":"Bound mechanical task","description":"**Goal:** m.\n\n```json:metadata\n{\"modelTier\":\"mechanical\",\"files\":[],\"verifyCommand\":\"true\",\"acceptanceCriteria\":[]}\n```"}}]}}
+{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"tc1","content":"Task #5 created successfully: Bound mechanical task"}]}}
+{"type":"assistant","message":{"content":[{"type":"tool_use","id":"tu1","name":"TaskUpdate","input":{"taskId":"5","status":"in_progress"}}]}}
+EOF
+INPUT=$(printf '{"tool_name":"Agent","tool_input":{"subagent_type":"general-purpose","model":"opus","prompt":"go"},"transcript_path":"%s","cwd":"%s"}' \
+    "$WORK/bound-mismatch.jsonl" "$WORK/project")
+rc=$(run_hook "$INPUT")
+assert "genuine mismatch on authoritative path → block" "2" "$rc"
+assert_stderr_contains "block names the real native id" "Task #5"
+assert_stderr_contains "block names the bound task subject" "Bound mechanical task"
+INPUT=$(printf '{"tool_name":"Agent","tool_input":{"subagent_type":"general-purpose","model":"haiku","prompt":"go"},"transcript_path":"%s","cwd":"%s"}' \
+    "$WORK/bound-mismatch.jsonl" "$WORK/project")
+rc=$(run_hook "$INPUT")
+assert "mechanical task, haiku dispatch on authoritative path → allow" "0" "$rc"
+echo ""
+
+echo "Test 33: custom agent type - frontmatter model resolution"
+# Agent definitions: project-level under $WORK/project/.claude/agents/.
+PROJ_AGENTS="$WORK/project/.claude/agents"
+mkdir -p "$PROJ_AGENTS"
+cat > "$PROJ_AGENTS/sonnet-medium-executor.md" <<'EOF'
+---
+name: sonnet-medium-executor
+description: Implementation worker on Sonnet pinned at medium effort.
+model: sonnet
+effort: medium
+tools: [Read, Write, Edit, Bash]
+---
+
+You are an implementation worker.
+EOF
+cat > "$PROJ_AGENTS/opus-deep-designer.md" <<'EOF'
+---
+name: opus-deep-designer
+description: Design worker on Opus.
+model: opus
+---
+
+You are a designer.
+EOF
+cat > "$PROJ_AGENTS/no-model-helper.md" <<'EOF'
+---
+name: no-model-helper
+description: Helper with no model pin.
+---
+
+You help.
+EOF
+
+echo "Test 33a: custom type, frontmatter model=sonnet, mechanical task → allow (reviewer member)"
+INPUT=$(printf '{"tool_name":"Agent","tool_input":{"subagent_type":"sonnet-medium-executor","prompt":"go"},"transcript_path":"%s","cwd":"%s"}' \
+    "$WORK/tier-mechanical.jsonl" "$WORK/project")
+rc=$(run_hook "$INPUT")
+assert "exit code" "0" "$rc"
+echo ""
+
+echo "Test 33b: custom type, frontmatter model=opus, mechanical task → block (resolved, outside allowed set)"
+INPUT=$(printf '{"tool_name":"Agent","tool_input":{"subagent_type":"opus-deep-designer","prompt":"go"},"transcript_path":"%s","cwd":"%s"}' \
+    "$WORK/tier-mechanical.jsonl" "$WORK/project")
+rc=$(run_hook "$INPUT")
+assert "exit code" "2" "$rc"
+assert_stderr_contains "headline present" "AGENT DISPATCH DOES NOT MATCH TASK MODEL TIER"
+assert_stderr_contains "names got model" "model='opus'"
+echo ""
+
+echo "Test 33c: custom type, no def file anywhere → allow (exempt, fail-open)"
+INPUT=$(printf '{"tool_name":"Agent","tool_input":{"subagent_type":"ghost-agent","prompt":"go"},"transcript_path":"%s","cwd":"%s"}' \
+    "$WORK/tier-mechanical.jsonl" "$WORK/project")
+rc=$(run_hook "$INPUT")
+assert "exit code" "0" "$rc"
+echo ""
+
+echo "Test 33d: custom type, def without model: key → allow (exempt)"
+INPUT=$(printf '{"tool_name":"Agent","tool_input":{"subagent_type":"no-model-helper","prompt":"go"},"transcript_path":"%s","cwd":"%s"}' \
+    "$WORK/tier-mechanical.jsonl" "$WORK/project")
+rc=$(run_hook "$INPUT")
+assert "exit code" "0" "$rc"
+echo ""
+
+echo "Test 33e: custom type + explicit model param → exempt (param present, old contract)"
+INPUT=$(printf '{"tool_name":"Agent","tool_input":{"subagent_type":"sonnet-medium-executor","model":"haiku","prompt":"go"},"transcript_path":"%s","cwd":"%s"}' \
+    "$WORK/tier-mechanical.jsonl" "$WORK/project")
+rc=$(run_hook "$INPUT")
+assert "param haiku on mechanical task → allow" "0" "$rc"
+INPUT=$(printf '{"tool_name":"Agent","tool_input":{"subagent_type":"sonnet-medium-executor","model":"opus","prompt":"go"},"transcript_path":"%s","cwd":"%s"}' \
+    "$WORK/tier-mechanical.jsonl" "$WORK/project")
+rc=$(run_hook "$INPUT")
+assert "param opus on mechanical task → allow (explicit param keeps custom-type exemption)" "0" "$rc"
+echo ""
+
+echo "Test 33f: project def wins over user-level def"
+DEFHOME="$WORK/defhome/.claude/agents"
+mkdir -p "$DEFHOME"
+cat > "$DEFHOME/sonnet-medium-executor.md" <<'EOF'
+---
+name: sonnet-medium-executor
+model: opus
+---
+
+Shadow def that must NOT win.
+EOF
+INPUT=$(printf '{"tool_name":"Agent","tool_input":{"subagent_type":"sonnet-medium-executor","prompt":"go"},"transcript_path":"%s","cwd":"%s"}' \
+    "$WORK/tier-mechanical.jsonl" "$WORK/project")
+rc=$(run_hook "$INPUT" HOME="$WORK/defhome")
+assert "project frontmatter sonnet used (user opus def ignored) → allow" "0" "$rc"
+echo ""
+
+echo "Test 33g: user-level def resolves when no project def"
+INPUT=$(printf '{"tool_name":"Agent","tool_input":{"subagent_type":"sonnet-medium-executor","prompt":"go"},"transcript_path":"%s","cwd":"%s"}' \
+    "$WORK/tier-mechanical.jsonl" "$WORK/wildcardproject")
+rc=$(run_hook "$INPUT" HOME="$WORK/defhome")
+assert "user def opus resolved; wildcard project (standard=inherit) → allow any" "0" "$rc"
+INPUT=$(printf '{"tool_name":"Agent","tool_input":{"subagent_type":"sonnet-medium-executor","prompt":"go"},"transcript_path":"%s","cwd":"%s"}' \
+    "$WORK/tier-standard.jsonl" "$WORK/project")
+# project def (sonnet) present in $WORK/project → use a cwd whose project has
+# routing but no agents dir: copy routing to a bare project.
+BARE="$WORK/bareproject"
+mkdir -p "$BARE/docs/superpowers"
+cp "$WORK/project/docs/superpowers/model-routing.json" "$BARE/docs/superpowers/model-routing.json"
+INPUT=$(printf '{"tool_name":"Agent","tool_input":{"subagent_type":"sonnet-medium-executor","prompt":"go"},"transcript_path":"%s","cwd":"%s"}' \
+    "$WORK/tier-mechanical.jsonl" "$BARE")
+rc=$(run_hook "$INPUT" HOME="$WORK/defhome")
+assert "user def opus resolved, mechanical task → block" "2" "$rc"
+echo ""
+
+echo "Test 33h: YAML-quoted frontmatter model - quotes stripped, pin honored"
+cat > "$PROJ_AGENTS/quoted-sonnet-auditor.md" <<'EOF'
+---
+name: quoted-sonnet-auditor
+description: Auditor with a double-quoted model pin.
+model: "sonnet"
+---
+
+You audit.
+EOF
+INPUT=$(printf '{"tool_name":"Agent","tool_input":{"subagent_type":"quoted-sonnet-auditor","prompt":"go"},"transcript_path":"%s","cwd":"%s"}' \
+    "$WORK/tier-mechanical.jsonl" "$WORK/project")
+rc=$(run_hook "$INPUT")
+assert "double-quoted \"sonnet\" resolves like bare sonnet → allow" "0" "$rc"
+cat > "$PROJ_AGENTS/quoted-opus-designer.md" <<'EOF'
+---
+name: quoted-opus-designer
+model: 'opus'
+---
+
+You design.
+EOF
+INPUT=$(printf '{"tool_name":"Agent","tool_input":{"subagent_type":"quoted-opus-designer","prompt":"go"},"transcript_path":"%s","cwd":"%s"}' \
+    "$WORK/tier-mechanical.jsonl" "$WORK/project")
+rc=$(run_hook "$INPUT")
+assert "single-quoted 'opus' resolves like bare opus → block" "2" "$rc"
+echo ""
+
+echo "Test 33i: CRLF-fenced def file → unresolved, exempt (accepted fail-open)"
+printf -- '---\r\nname: crlf-agent\r\nmodel: opus\r\n---\r\n\r\nCRLF body.\r\n' > "$PROJ_AGENTS/crlf-agent.md"
+INPUT=$(printf '{"tool_name":"Agent","tool_input":{"subagent_type":"crlf-agent","prompt":"go"},"transcript_path":"%s","cwd":"%s"}' \
+    "$WORK/tier-mechanical.jsonl" "$WORK/project")
+rc=$(run_hook "$INPUT")
+assert "CRLF fences never match /^---$/ → exempt/allow" "0" "$rc"
+echo ""
+
+echo "Test 33j: trailing YAML comment on model line - stripped, pin honored"
+cat > "$PROJ_AGENTS/commented-sonnet.md" <<'EOF'
+---
+name: commented-sonnet
+model: sonnet   # pinned per team convention
+---
+
+You work.
+EOF
+INPUT=$(printf '{"tool_name":"Agent","tool_input":{"subagent_type":"commented-sonnet","prompt":"go"},"transcript_path":"%s","cwd":"%s"}' \
+    "$WORK/tier-mechanical.jsonl" "$WORK/project")
+rc=$(run_hook "$INPUT")
+assert "model: sonnet # comment resolves like bare sonnet → allow" "0" "$rc"
+echo ""
+
+echo "Test 33k: model: line between a LATER '---' pair in the body - no phantom pin"
+cat > "$PROJ_AGENTS/body-fence-agent.md" <<'EOF'
+---
+name: body-fence-agent
+description: frontmatter has NO model key
+---
+
+Example config for authors:
+
+---
+model: opus
+---
+
+More body text.
+EOF
+INPUT=$(printf '{"tool_name":"Agent","tool_input":{"subagent_type":"body-fence-agent","prompt":"go"},"transcript_path":"%s","cwd":"%s"}' \
+    "$WORK/tier-mechanical.jsonl" "$WORK/project")
+rc=$(run_hook "$INPUT")
+assert "body '---' pair cannot mint a model pin → exempt/allow" "0" "$rc"
+echo ""
+
+# Test 34: [sdd-review] marker exempts a dispatch from BOTH dials.
+# Fork behavior: this fork routes reviewer dispatches by marker instead of the
+# upstream AskUserQuestion handoff guard. The marker check runs before the
+# routing file is read, so it must exempt the effort check too.
+echo "Test 34: [sdd-review] dispatch description → exempt"
+
+# 34a: model that would otherwise block on a mechanical task.
+INPUT=$(printf '{"tool_name":"Agent","tool_input":{"model":"opus","description":"[sdd-review] code-quality reviewer","prompt":"review"},"transcript_path":"%s","cwd":"%s"}' \
+    "$WORK/tier-mechanical.jsonl" "$WORK/project")
+rc=$(run_hook "$INPUT")
+assert "opus reviewer on mechanical task → allow (marker exempt)" "0" "$rc"
+
+# 34b: same dispatch without the marker must still block, or 34a proves nothing.
+INPUT=$(printf '{"tool_name":"Agent","tool_input":{"model":"opus","description":"code-quality reviewer","prompt":"review"},"transcript_path":"%s","cwd":"%s"}' \
+    "$WORK/tier-mechanical.jsonl" "$WORK/project")
+rc=$(run_hook "$INPUT")
+assert "same dispatch without marker → block (control)" "2" "$rc"
+
+# 34c: marker exempts effort enforcement as well — no effort pinned anywhere,
+# which is exactly what enforceEffort blocks for a non-exempt dispatch.
+EFFORT_DIR="$WORK/effortproject/docs/superpowers"
+mkdir -p "$EFFORT_DIR"
+cat > "$EFFORT_DIR/model-routing.json" <<'EOF'
+{"mechanical":"haiku","standard":"sonnet","frontier":"inherit","enforceEffort":true}
+EOF
+INPUT=$(printf '{"tool_name":"Agent","tool_input":{"model":"opus","description":"[sdd-review] spec reviewer","prompt":"review"},"transcript_path":"%s","cwd":"%s"}' \
+    "$WORK/tier-mechanical.jsonl" "$WORK/effortproject")
+rc=$(run_hook "$INPUT")
+assert "marker exempt under enforceEffort, no effort pinned → allow" "0" "$rc"
+
+# 34d: control for 34c — without the marker, enforceEffort blocks it.
+INPUT=$(printf '{"tool_name":"Agent","tool_input":{"model":"haiku","description":"spec reviewer","prompt":"review"},"transcript_path":"%s","cwd":"%s"}' \
+    "$WORK/tier-mechanical.jsonl" "$WORK/effortproject")
+rc=$(run_hook "$INPUT")
+assert "same dispatch without marker under enforceEffort → block (control)" "2" "$rc"
+echo ""
+
 echo "=== Summary: $FAILED failure(s) ==="
 exit "$FAILED"
