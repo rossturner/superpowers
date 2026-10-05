@@ -24,11 +24,18 @@ Subagent (general-purpose):
 
     **Base:** [BASE_SHA]
     **Head:** [HEAD_SHA]
+    **Diff file:** [DIFF_FILE, or "none"]
 
-    ```bash
-    git diff --stat [BASE_SHA]..[HEAD_SHA]
-    git diff [BASE_SHA]..[HEAD_SHA]
-    ```
+    Read the whole diff file in chunks of about 1,000 lines using `offset`,
+    until a Read returns the end of the file. If a Read fails on size, halve
+    the chunk and continue. Read each part once. The first line gives the
+    total as `(<L> lines)`; in your report, state that you read through line
+    L (or through the last line, when no total is given). A verdict on part
+    of the diff is not a review.
+    If no diff file was given, write one and read it by the same rule:
+    `{ git log --oneline [BASE_SHA]..[HEAD_SHA]; git diff --stat [BASE_SHA]..[HEAD_SHA];
+    git diff -U10 [BASE_SHA]..[HEAD_SHA]; } > <scratch file>`. Do not read a
+    long diff from command output — it is truncated without warning.
 
     ## Read-Only Review
 

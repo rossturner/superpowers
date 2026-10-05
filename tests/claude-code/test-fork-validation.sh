@@ -100,10 +100,11 @@ else
 fi
 
 # 7. Coarse task granularity.
-# Fork divergence: a task is one outcome, and neither file count nor commit count
-# bounds it. Upstream sizes a task at one commit and asks for bite-sized tasks, so
-# a merge re-introduces the phrases below. Anchored on short strings so an upstream
-# rewording still trips the check.
+# Fork divergence: a task is one outcome, and neither size, file count nor commit
+# count bounds it. Upstream sizes a task at one commit and asks for bite-sized
+# tasks, so a merge re-introduces the phrases below. No line ceiling either:
+# reviewers read the whole package in chunks instead. Anchored on short strings
+# so an upstream rewording still trips the check.
 echo "Test 7: Coarse task granularity..."
 GRANULARITY_FAIL=0
 check_absent() {
@@ -125,8 +126,26 @@ check_absent "Commit Boundary = Task Boundary" skills/shared/task-format-referen
 check_absent "more than one concern" skills/shared/task-format-reference.md
 check_absent "more than one concern" skills/writing-plans/SKILL.md
 check_absent "bullet points" skills/shared/task-format-reference.md
-# The three tests and the TDD subsection must survive the same merge.
-for phrase in "**Merge.**" "**Split.**" "**Ceiling.**" "TDD Within Tasks"; do
+for f in skills/writing-plans/SKILL.md skills/shared/task-format-reference.md; do
+    check_absent "**Ceiling.**" "$f"
+    check_absent "600 lines" "$f"
+    if ! grep -qF "is holding two outcomes" "$REPO_ROOT/$f" 2>/dev/null; then
+        echo "  [FAIL] $f lost the one-sentence Goal rule in Split"
+        GRANULARITY_FAIL=$((GRANULARITY_FAIL + 1))
+    fi
+done
+for f in skills/subagent-driven-development/spec-reviewer-prompt.md \
+         skills/subagent-driven-development/code-quality-reviewer-prompt.md \
+         skills/subagent-driven-development/re-review-prompt.md \
+         skills/requesting-code-review/code-reviewer.md; do
+    if ! grep -qF "read through line" "$REPO_ROOT/$f" 2>/dev/null; then
+        echo "  [FAIL] $f does not require reading the whole review package"
+        GRANULARITY_FAIL=$((GRANULARITY_FAIL + 1))
+    fi
+done
+check_absent "oversize package" skills/subagent-driven-development/SKILL.md
+# The two tests and the TDD subsection must survive the same merge.
+for phrase in "**Merge.**" "**Split.**" "TDD Within Tasks"; do
     if ! grep -qF "$phrase" "$REPO_ROOT/skills/shared/task-format-reference.md" 2>/dev/null; then
         echo "  [FAIL] skills/shared/task-format-reference.md lost '$phrase'"
         GRANULARITY_FAIL=$((GRANULARITY_FAIL + 1))
@@ -140,6 +159,34 @@ if [ $GRANULARITY_FAIL -gt 0 ]; then
     FAILED=$((FAILED + GRANULARITY_FAIL))
 else
     echo "  [PASS] Task granularity rules intact"
+fi
+
+# 8. Autonomous execution.
+# Fork divergence: subagent-driven-development never stops mid-run to ask the
+# user; it decides, logs the ruling, and reports it at the end. Upstream asks
+# which governs, escalates to the human, and tells implementers not to guess.
+echo "Test 8: Autonomous execution..."
+AUTONOMY_FAIL=0
+check_autonomy_absent() {
+    if grep -qi "$1" "$REPO_ROOT/$2" 2>/dev/null; then
+        echo "  [FAIL] $2 contains '$1' — a mid-run stop crept back in"
+        AUTONOMY_FAIL=$((AUTONOMY_FAIL + 1))
+    fi
+}
+for phrase in "which governs" "escalate to the human" "report BLOCKED" "oversize package"; do
+    check_autonomy_absent "$phrase" skills/subagent-driven-development/SKILL.md
+done
+for phrase in "Ask them now" "Don't guess"; do
+    check_autonomy_absent "$phrase" skills/subagent-driven-development/implementer-prompt.md
+done
+if ! grep -q "Never stop mid-run" "$REPO_ROOT/skills/subagent-driven-development/SKILL.md" 2>/dev/null; then
+    echo "  [FAIL] skills/subagent-driven-development/SKILL.md lost 'Never stop mid-run'"
+    AUTONOMY_FAIL=$((AUTONOMY_FAIL + 1))
+fi
+if [ $AUTONOMY_FAIL -gt 0 ]; then
+    FAILED=$((FAILED + AUTONOMY_FAIL))
+else
+    echo "  [PASS] Autonomous execution rules intact"
 fi
 
 # Summary

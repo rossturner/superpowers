@@ -42,13 +42,19 @@ Subagent (general-purpose):
     **Head:** [HEAD_SHA]
     **Diff file:** [DIFF_FILE]
 
-    Read the diff file once — it contains the commit list, a stat summary,
-    and the full diff with surrounding context, and it is your view of the
-    change. The diff's context lines ARE the changed files: do not Read a
+    The diff file contains the commit list, a stat summary, and the full
+    diff with surrounding context, and it is your view of the change.
+    Read the whole diff file in chunks of about 1,000 lines using `offset`,
+    until a Read returns the end of the file. If a Read fails on size, halve
+    the chunk and continue. Read each part once. The first line gives the
+    total as `(<L> lines)`; in your report, state that you read through line
+    L (or through the last line, when no total is given). A verdict on part
+    of the diff is not a review. The diff's context lines ARE the changed files: do not Read a
     changed file separately unless a hunk you must judge is cut off
     mid-function — and say so in your report. Do not re-run git commands.
-    If the diff file is missing, fetch the diff yourself:
-    `git diff --stat [BASE_SHA]..[HEAD_SHA]` and `git diff [BASE_SHA]..[HEAD_SHA]`.
+    If the diff file is missing, write one yourself and read it by the same
+    rule: `{ git log --oneline [BASE_SHA]..[HEAD_SHA]; git diff --stat [BASE_SHA]..[HEAD_SHA];
+    git diff -U10 [BASE_SHA]..[HEAD_SHA]; } > <scratch file>`.
     Do not crawl the broader codebase.
 
     Your review is read-only on this checkout. Do not mutate the working

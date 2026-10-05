@@ -50,13 +50,12 @@ See `skills/shared/task-format-reference.md` for the full granularity guide.
 
 Key principle: TDD cycles happen WITHIN tasks, not as separate tasks. A task is "Implement X with tests" — the red-green-refactor steps are execution detail inside the task, not task boundaries.
 
-**Three tests:**
+**Two tests:**
 
 1. **Merge.** Adjacent tasks serving one outcome are one task. A task that cannot be verified on its own serves another task's outcome, and it merges into that task.
-2. **Split.** A task holding two outcomes is two tasks, where each outcome stands on its own and the plan makes sense with either one built alone.
-3. **Ceiling.** A task is too large when its Goal needs more than one sentence to state the outcome, or when the code in its steps runs past roughly 600 lines. A reviewer reads its diff as one file, and `git diff -U10` turns one changed line into about three lines of that file, so past 600 lines of code the reviewer reads part of the change and returns a verdict on the part it read. Your steps hold the code, so count it while you write.
+2. **Split.** A task holding two outcomes is two tasks, where each outcome stands on its own and the plan makes sense with either one built alone. A Goal that needs more than one sentence to state the outcome is holding two outcomes.
 
-A task spans as many files and as many commits as its outcome takes. Neither file count nor commit count bounds a task.
+A task spans as many files and as many commits as its outcome takes. Neither size, file count nor commit count bounds a task.
 
 **What a task costs to run.** `subagent-driven-development` executes every task as a brief file, an implementer dispatch, a review package and two reviewer dispatches, and those dispatches run in series because a reviewer reads a diff that exists only once the implementer has committed. Each round of review findings adds a fix dispatch and a scoped re-review. A plan of thirteen tasks costs at least thirty-nine dispatches before its final whole-branch review. Decompose to the plan's outcomes and stop there.
 
@@ -88,10 +87,10 @@ The final task of a plan is generally to update any relevant durable documentati
 
 ### Deferred decisions
 
-If the plan schedules questions for the user (a DECIDE list, an AskUserQuestion step), each question MUST:
-- Cite why it is still open despite the header decisions. If a recorded decision answers it, answer from the record — do not re-ask.
-- Carry the facts needed to answer it in the option descriptions: name the artifact AND its role/state (e.g. "stale GitHub mirror, last push 2026-03-25 — separate from your local-tools dev home"), and state what does NOT change under each option.
-- Recommend nothing that contradicts a recorded decision. That is a plan failure (same severity as No Placeholders).
+A plan does not schedule questions for the user at execution time: `subagent-driven-development` never stops mid-run to ask. A decision the plan leaves open states the default the controller applies, and the controller logs it. Each one MUST:
+- Cite why it is still open despite the header decisions. If a recorded decision answers it, answer from the record — do not leave it open.
+- Name the artifact AND its role/state (e.g. "stale GitHub mirror, last push 2026-03-25 — separate from your local-tools dev home"), and state what the default changes and what it leaves alone.
+- Default to nothing that contradicts a recorded decision. That is a plan failure (same severity as No Placeholders).
 
 ## Task Structure
 

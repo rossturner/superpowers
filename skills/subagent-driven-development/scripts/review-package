@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Generate a review package: commit list, stat summary, and the net
-# diff with extended context, written to a file the reviewer reads in one
-# call. Using the recorded per-task BASE (not HEAD~1) keeps multi-commit
+# diff with extended context, written to one file. The first line carries
+# the package's total line count, so a reviewer reading it in chunks knows
+# where the end is. Using the recorded per-task BASE (not HEAD~1) keeps multi-commit
 # tasks intact.
 #
 # Usage: review-package PLAN_FILE BASE HEAD [OUTFILE]
@@ -29,8 +30,9 @@ else
   out="$dir/review-$(git rev-parse --short "$base")..$(git rev-parse --short "$head").diff"
 fi
 
+body=$(mktemp)
+trap 'rm -f "$body"' EXIT
 {
-  echo "# Review package: ${base}..${head}"
   echo
   echo "## Commits"
   git log --oneline "${base}..${head}"
@@ -40,7 +42,13 @@ fi
   echo
   echo "## Diff"
   git diff -U10 "${base}..${head}"
+} > "$body"
+
+lines=$(( $(wc -l < "$body") + 1 ))
+{
+  echo "# Review package: ${base}..${head} (${lines} lines)"
+  cat "$body"
 } > "$out"
 
 commits=$(git rev-list --count "${base}..${head}")
-echo "wrote ${out}: ${commits} commit(s), $(wc -c < "$out" | tr -d ' ') bytes"
+echo "wrote ${out}: ${commits} commit(s), ${lines} lines"

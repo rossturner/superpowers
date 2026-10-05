@@ -32,7 +32,7 @@ The work's commits are `baseSha..HEAD`.
 
 ## Step 3: Squash
 
-**Auto-squash** `baseSha..HEAD` into a single commit — via `git reset --soft <baseSha>` then one commit — ONLY when all of these hold:
+**Auto-squash** `baseSha..HEAD` into a single commit — via `git reset --soft <baseSha>` then one commit — ONLY when all of these hold, and the caller's Decisions made list has no abandoned task and no `parked (load-bearing)` finding:
 
 - The range is **linear** (no merge commits), AND
 - it contains **only this work's commits** (nothing foreign or interleaved), AND
@@ -45,7 +45,20 @@ git merge-base --is-ancestor <baseSha> @{upstream}                        # are 
 
 Squashing commits that are already published would rewrite shared history.
 
-The squash commit message is derived from the spec/plan passed in by the caller.
+The squash commit message is derived from the spec/plan passed in by the caller. When Decisions made lists abandoned tasks, the message names them as not built.
+
+**When Decisions made lists an abandoned task or a `parked (load-bearing)` finding** — and the range is otherwise clean — ask once before squashing. Quote those entries in the question:
+
+```yaml
+AskUserQuestion:
+  question: "The run finished with <abandoned task / load-bearing finding: one line each>. Squash it?"
+  header: "Squash"
+  options:
+    - label: "Squash"
+      description: "Collapse the work into one commit; the message names what was not built"
+    - label: "Leave commits as-is"
+      description: "No squash; keep the per-task commits so parts can be reverted"
+```
 
 **Otherwise** — interleaved or foreign commits, or work already on the upstream — ask the user:
 
@@ -66,7 +79,7 @@ AskUserQuestion:
 
 ## Step 4: Summarize
 
-Summarize what was done overall — the feature, the key changes, and the final commit. Nothing else: no menu, no push offer, no further prompts.
+Summarize what was done overall — the feature, the key changes, the final commit, and the caller's Decisions made list. Nothing else: no menu, no push offer, no further prompts.
 
 ## Red Flags
 
@@ -75,7 +88,7 @@ Summarize what was done overall — the feature, the key changes, and the final 
 - Squash commits already on the upstream tracking ref without asking
 - Force-push without an explicit request
 - Guess the base SHA
-- Add a merge/PR/keep/discard menu, or any prompt beyond the squash question above
+- Add a merge/PR/keep/discard menu, or any prompt beyond the two squash questions above
 
 ## Common Rationalizations
 

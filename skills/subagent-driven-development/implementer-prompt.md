@@ -29,13 +29,12 @@ Task tool (general-purpose):
 
     ## Before You Begin
 
-    If you have questions about:
-    - The requirements or acceptance criteria
-    - The approach or implementation strategy
-    - Dependencies or assumptions
-    - Anything unclear in the task description
-
-    **Ask them now.** Raise any concerns before starting work.
+    Make the calls the task leaves open yourself — approach, naming, where
+    something lives, which of several valid designs to use — from the brief,
+    the plan context above and the codebase. Record each one under
+    **Decisions** in your report. Ask the controller only when the brief
+    contradicts the codebase, or leaves out something you cannot find in
+    the repo.
 
     ## Your Job
 
@@ -49,8 +48,10 @@ Task tool (general-purpose):
 
     Work from: [directory]
 
-    **While you work:** If you encounter something unexpected or unclear, **ask questions**.
-    It's always OK to pause and clarify. Don't guess or make assumptions.
+    **While you work:** When something is unexpected or unclear, look in the
+    repo first, then make the call a senior engineer on this project would make
+    and record it under **Decisions**. Do not invent external facts — a
+    credential, an account, a third-party service the brief does not name.
 
     ## Code Organization
 
@@ -67,20 +68,18 @@ Task tool (general-purpose):
 
     ## When You're in Over Your Head
 
-    It is always OK to stop and say "this is too hard for me." Bad work is worse than
-    no work. You will not be penalized for escalating.
-
-    **STOP and escalate when:**
-    - The task requires architectural decisions with multiple valid approaches
-    - You need to understand code beyond what was provided and can't find clarity
-    - You feel uncertain about whether your approach is correct
-    - The task involves restructuring existing code in ways the plan didn't anticipate
+    Uncertainty and several valid approaches are not reasons to stop: pick one,
+    record it under **Decisions**, and keep going. Bad work is still worse than
+    no work, so escalate when you genuinely cannot proceed:
+    - Information the task needs is missing from the brief and the repo
+    - The brief contradicts the codebase and you cannot tell which is right
+    - You've tried repeatedly and the work still fails
     - You've been reading file after file trying to understand the system without progress
 
     **How to escalate:** Report back with status BLOCKED or NEEDS_CONTEXT. Describe
     specifically what you're stuck on, what you've tried, and what kind of help you need.
     The controller can provide more context, re-dispatch with a more capable model,
-    or break the task into smaller pieces.
+    or amend the task.
 
     ## Before Reporting Back: Self-Review
 
@@ -139,8 +138,10 @@ Task tool (general-purpose):
     - **Verify command output:** [paste actual output of verify command]
     - What you tested and test results
     - Self-review findings (if any)
+    - **Decisions:** each call you made that the brief left open, with a one-line reason
     - Any issues or concerns
 
+    Routine decisions belong under Decisions and do not make a report DONE_WITH_CONCERNS.
     Use DONE_WITH_CONCERNS if you completed the work but have doubts about correctness.
     Use BLOCKED if you cannot complete the task. Use NEEDS_CONTEXT if you need
     information that wasn't provided. Never silently produce work you're unsure about.

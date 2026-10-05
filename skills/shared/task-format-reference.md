@@ -120,15 +120,13 @@ TaskCreate:
 
 A task is **one outcome**. A plan names its outcomes in the Architecture paragraph of its header, and that paragraph is the authority on what counts as one. The File Structure section lists the files each outcome touches.
 
-Three tests decide where a task begins and ends.
+Two tests decide where a task begins and ends.
 
 **Merge.** Adjacent tasks serving one outcome are one task. A task that cannot be verified on its own serves another task's outcome, and it merges into that task.
 
-**Split.** A task holding two outcomes is two tasks, where each outcome stands on its own and the plan makes sense with either one built alone.
+**Split.** A task holding two outcomes is two tasks, where each outcome stands on its own and the plan makes sense with either one built alone. A Goal that needs more than one sentence to state the outcome is holding two outcomes.
 
-**Ceiling.** A task is too large when its Goal needs more than one sentence to state the outcome, or when the code in its steps runs past roughly 600 lines. A reviewer reads its diff as one file, and `git diff -U10` turns one changed line into about three lines of that file, so past 600 lines of code the reviewer reads part of the change and returns a verdict on the part it read.
-
-A task spans as many files and as many commits as its outcome takes. Neither file count nor commit count bounds a task. Every task costs a brief file, an implementer dispatch, a review package and two reviewer dispatches at execution, and those dispatches run in series, so a decomposition finer than the outcomes buys nothing and is paid for in wall-clock time.
+A task spans as many files and as many commits as its outcome takes. Neither size, file count nor commit count bounds a task. Every task costs a brief file, an implementer dispatch, a review package and two reviewer dispatches at execution, and those dispatches run in series, so a decomposition finer than the outcomes buys nothing and is paid for in wall-clock time.
 
 ### TDD Within Tasks (Not Across Tasks)
 

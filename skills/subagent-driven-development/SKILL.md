@@ -11,7 +11,7 @@ Execute a plan by dispatching a fresh subagent per task, with two reviews after 
 
 **Core principle:** Fresh subagent per task + parallel two-track review (spec + quality) = high quality, fast iteration
 
-**Continuous execution:** Do not pause to check in with your human partner between tasks. Execute all tasks from the plan without stopping. The only reasons to stop are: a BLOCKED status you cannot resolve, a genuinely critical question that prevents progress, or all tasks complete. "Should I continue?" prompts and progress summaries waste their time — they asked you to execute the plan, so execute it.
+**Continuous execution:** Never stop mid-run: decide, log, continue. Do not pause to check in with your human partner between tasks, and do not stop to ask them a question. Every question that comes up — from an implementer, a reviewer finding, a BLOCKED return, or the plan itself — is yours to decide (see Deciding Questions Yourself). The run ends when all tasks are complete or abandoned. "Should I continue?" prompts and progress summaries waste their time — they asked you to execute the plan, so execute it. The one exception is a user-gate task, when the user enabled that feature.
 
 ## Orientation: Summarize the Loop First
 
@@ -21,7 +21,7 @@ Your FIRST action on invoking this skill, before reading the plan or touching an
 2. Read the plan and build the task list (full text + metadata).
 3. Per task: record BASE → dispatch implementer → generate the review package → dispatch spec reviewer + code reviewer in parallel → fix rounds (max 5), re-running only the addressed reviewer → append the completion line to the ledger → mark the task completed.
 4. After the last task: dispatch the final whole-implementation code reviewer → one fix wave → one scoped re-review → adjudicate residuals.
-5. Delete this plan's workspace, then hand off to `finishing-a-development-branch`, which squashes and summarizes.
+5. Compile Decisions made from the ledger, delete this plan's workspace, then hand off to `finishing-a-development-branch`, which squashes and summarizes.
 
 ## When to Use
 
@@ -63,14 +63,14 @@ digraph process {
         "Generate review package; dispatch spec reviewer (cheap) + code reviewer (orchestrator tier) in PARALLEL" [shape=box];
         "Spec OK and quality approved?" [shape=diamond];
         "Finding conflicts with plan text?" [shape=diamond];
-        "Ask human partner which governs" [shape=box];
+        "Rule plan vs finding; log decision" [shape=box];
         "Fix round R of 5: R<=3 resume implementer; R>=4 fresh implementer, more capable model" [shape=box];
         "Scoped re-review (./re-review-prompt.md) of ONLY the addressed reviewer's findings" [shape=box];
         "All findings addressed?" [shape=diamond];
         "R = 5?" [shape=diamond];
         "Adjudicate each open finding" [shape=box];
         "Any load-bearing finding?" [shape=diamond];
-        "STOP: report BLOCKED to human partner" [shape=box];
+        "Amend a later task, or park as load-bearing" [shape=box];
         "Park findings in ledger with rulings" [shape=box];
         "Append completion to ledger; TaskUpdate completed + sync .tasks.json" [shape=box];
     }
@@ -78,7 +78,7 @@ digraph process {
     "More tasks remain?" [shape=diamond];
     "Dispatch final code reviewer (../requesting-code-review/code-reviewer.md)" [shape=box];
     "Final findings? ONE fix dispatch, one scoped re-review, adjudicate residuals" [shape=box];
-    "Final review clean: delete this plan's workspace" [shape=box];
+    "Compile Decisions made; delete this plan's workspace" [shape=box];
     "Use superpowers-ross:finishing-a-development-branch (squash + summary)" [shape=box style=filled fillcolor=lightgreen];
 
     "Print loop summary to self" -> "Capture base SHA";
@@ -93,8 +93,8 @@ digraph process {
     "Generate review package; dispatch spec reviewer (cheap) + code reviewer (orchestrator tier) in PARALLEL" -> "Spec OK and quality approved?";
     "Spec OK and quality approved?" -> "Append completion to ledger; TaskUpdate completed + sync .tasks.json" [label="yes"];
     "Spec OK and quality approved?" -> "Finding conflicts with plan text?" [label="no"];
-    "Finding conflicts with plan text?" -> "Ask human partner which governs" [label="yes"];
-    "Ask human partner which governs" -> "Fix round R of 5: R<=3 resume implementer; R>=4 fresh implementer, more capable model";
+    "Finding conflicts with plan text?" -> "Rule plan vs finding; log decision" [label="yes"];
+    "Rule plan vs finding; log decision" -> "Fix round R of 5: R<=3 resume implementer; R>=4 fresh implementer, more capable model";
     "Finding conflicts with plan text?" -> "Fix round R of 5: R<=3 resume implementer; R>=4 fresh implementer, more capable model" [label="no"];
     "Fix round R of 5: R<=3 resume implementer; R>=4 fresh implementer, more capable model" -> "Scoped re-review (./re-review-prompt.md) of ONLY the addressed reviewer's findings";
     "Scoped re-review (./re-review-prompt.md) of ONLY the addressed reviewer's findings" -> "All findings addressed?";
@@ -103,15 +103,16 @@ digraph process {
     "R = 5?" -> "Fix round R of 5: R<=3 resume implementer; R>=4 fresh implementer, more capable model" [label="no - next round"];
     "R = 5?" -> "Adjudicate each open finding" [label="yes - breaker trips"];
     "Adjudicate each open finding" -> "Any load-bearing finding?";
-    "Any load-bearing finding?" -> "STOP: report BLOCKED to human partner" [label="yes"];
+    "Any load-bearing finding?" -> "Amend a later task, or park as load-bearing" [label="yes"];
+    "Amend a later task, or park as load-bearing" -> "Append completion to ledger; TaskUpdate completed + sync .tasks.json";
     "Any load-bearing finding?" -> "Park findings in ledger with rulings" [label="no"];
     "Park findings in ledger with rulings" -> "Append completion to ledger; TaskUpdate completed + sync .tasks.json";
     "Append completion to ledger; TaskUpdate completed + sync .tasks.json" -> "More tasks remain?";
     "More tasks remain?" -> "Record BASE; dispatch implementer (./implementer-prompt.md)" [label="yes"];
     "More tasks remain?" -> "Dispatch final code reviewer (../requesting-code-review/code-reviewer.md)" [label="no"];
     "Dispatch final code reviewer (../requesting-code-review/code-reviewer.md)" -> "Final findings? ONE fix dispatch, one scoped re-review, adjudicate residuals";
-    "Final findings? ONE fix dispatch, one scoped re-review, adjudicate residuals" -> "Final review clean: delete this plan's workspace";
-    "Final review clean: delete this plan's workspace" -> "Use superpowers-ross:finishing-a-development-branch (squash + summary)";
+    "Final findings? ONE fix dispatch, one scoped re-review, adjudicate residuals" -> "Compile Decisions made; delete this plan's workspace";
+    "Compile Decisions made; delete this plan's workspace" -> "Use superpowers-ross:finishing-a-development-branch (squash + summary)";
 }
 ```
 
@@ -135,8 +136,9 @@ Conversation memory does not survive compaction. In real sessions, controllers t
   every artifact for THIS plan: ledger, briefs, reports, review packages.
   Another plan's directory is never yours to read or write.
 - Check for this plan's ledger at `<workspace>/progress.md`. If its first
-  line names your plan file, tasks with a `Task <N>: complete` line are DONE
-  — do not re-dispatch them; resume at the first task without one. A task
+  line names your plan file, tasks with a `Task <N>: complete` or
+  `Task <N>: abandoned` line are finished — do not re-dispatch them; resume
+  at the first task without one. A task
   whose last line is a fix round is mid-loop: resume the loop at the next
   round. A task with a `Task <N>: dispatched (base <base7>)` line and no
   `complete` line is mid-flight: take its BASE from that line, because
@@ -152,8 +154,9 @@ Conversation memory does not survive compaction. In real sessions, controllers t
 - `git clean -fdx` will destroy the workspace (it's git-ignored scratch); if
   that happens, recover from `git log`.
 - The ledger records STATE, not reasoning. Entries are the one-line forms
-  in this skill (dispatch, fix round, complete, minor, parked, BLOCKED) —
-  one event, one line; only a parked ruling may run to three. No
+  in this skill (dispatch, fix round, complete, minor, parked, decision,
+  amended, abandoned) — one event, one line; only a parked ruling may run
+  to three. No
   methodology narration, no reviewer praise, no self-correction essays, no
   restating an earlier entry's facts — every extra line is re-read on
   every later turn. A lesson about your own process is not state: put it
@@ -307,7 +310,7 @@ Single-file mechanical fixes take the cheapest tier.
 
 **Turn count beats token price.** Wall-clock and context cost scale with how many turns a subagent takes, for every role in this skill. A cheaper model that takes 2-3× the turns costs more overall, so read the tier signals above as a floor on capability rather than a race to the bottom.
 
-**Spec compliance reviewer:** the cheap/mechanical tier. Comparison work, not judgment work.
+**Spec compliance reviewer:** the cheap/mechanical tier. Comparison work, not judgment work. When the review package is over 3,000 lines, use sonnet, so the reviewer has room for the whole package plus the brief and the report.
 
 **Code quality reviewer:** the orchestrator's session tier — sonnet by default, even when this orchestrator runs on opus. Escalate to opus only for a genuinely subtle, design-heavy change. For a small, mechanical, or otherwise trivial task you MAY drop to haiku or skip this reviewer; the spec reviewer is never skippable.
 
@@ -363,23 +366,26 @@ Implementer subagents report one of four statuses. Handle each appropriately:
 
 **DONE_WITH_CONCERNS:** The implementer completed the work but flagged doubts. Read the concerns before proceeding. If the concerns are about correctness or scope, address them before review. If they're observations (e.g., "this file is getting large"), note them and proceed to review.
 
-**NEEDS_CONTEXT:** The implementer needs information that wasn't provided. Provide the missing context and re-dispatch.
+**NEEDS_CONTEXT:** The implementer needs information that wasn't provided. Find it in the plan, the spec or the codebase, or decide it (see Deciding Questions Yourself), and re-dispatch.
 
-**BLOCKED:** The implementer cannot complete the task. Assess the blocker:
-1. If it's a context problem, provide more context and re-dispatch with the same model
-2. If the task requires more reasoning, re-dispatch one tier up (typically haiku → sonnet). Reach for opus only if sonnet has also returned BLOCKED.
-3. If the task is too large, report the task, the implementer's report file and the plan text to your human partner. A plan written under the current granularity rule holds one task per outcome and no smaller pieces to fall back on, so amending the plan is the human's decision
-4. If the plan itself is wrong, escalate to the human
+**BLOCKED:** The implementer cannot complete the task. Work down this list:
+1. A context problem: provide more context and re-dispatch with the same model.
+2. The task needs more reasoning: re-dispatch one tier up (typically haiku → sonnet), as far as opus. Before the dispatch, TaskUpdate the task's `modelTier` to the new tier and log it as a `decision` line, so the model-routing hook admits the dispatch.
+3. Still blocked on opus, or the plan is wrong for this task: amend the task once. Write the amendment into the native task description (TaskUpdate) and the task's brief file, and append `Task <N>: amended — <what changed> — <why>`. Never edit the plan file, and never split or renumber the task. Re-dispatch.
+4. Blocked again after an amendment, or impossible as specified: abandon it. Append `Task <N>: abandoned — <reason>; dependents: <how each was handled>`, TaskUpdate the task completed with its description shrunk to its **Goal:** line plus `ABANDONED — see ledger.`, and set its `.tasks.json` status to `"abandoned"`. Native completion keeps `blockedBy` from holding its dependents. For each dependent, either amend it to stand without the abandoned work or abandon it too.
 
 **Never** ignore an escalation or force the same model to retry without changes. If the implementer said it's stuck, something needs to change.
 
 If the implementer asks questions — before starting or mid-task — answer clearly and completely, provide additional context if needed, and don't rush it into implementation.
 
-## Escalating Questions to Your Human Partner
+## Deciding Questions Yourself
 
-Before ANY execution-time AskUserQuestion — plan-scripted or relayed from an implementer:
-1. Re-read the plan header's "User decisions (already made)". If a recorded decision answers the question, use that answer instead of asking.
-2. If you do ask: name the artifact AND its role/state from the plan's facts (not just its name), and make each option description say what changes and what stays the same. Your human partner does not hold the plan in their head — an unanchored recommendation reads as a new proposal.
+You never stop mid-run to ask your human partner. Every question — relayed from an implementer, raised by a finding, or left open by the plan — is yours to decide:
+1. Re-read the plan header's "User decisions (already made)". If a recorded decision answers the question, apply it.
+2. Otherwise decide from the spec, the plan text and the codebase, the way a senior engineer on the project would. A plan's Deferred decisions state the default to apply.
+3. Append `Task <N>: decision — <question> — ruling: <choice, why>` to the ledger. Every ruling reaches your human partner at the end, in Decisions made.
+
+You may make product and design calls. You never invent an external fact — a credential, an account, a third-party service the spec does not name. A task that cannot proceed without one is abandoned (BLOCKED step 4).
 
 ### 3. Review the task — two reviewers, in parallel
 
@@ -398,19 +404,15 @@ Mark every reviewer and review-fix dispatch with `[sdd-review]` in the Agent cal
   `scripts/review-package PLAN_FILE BASE HEAD` **once** and pass BOTH reviewers
   the same printed path (or, without bash: `git log --oneline`, `git diff --stat`,
   and `git diff -U10` for the range, redirected to one uniquely named
-  file). The output never enters your own context, and each reviewer sees
-  the commit list, stat summary, and full diff with context in one Read
-  call. Use the BASE you recorded before dispatching the implementer —
+  file). The output never enters your own context, and each reviewer reads
+  the commit list, stat summary, and full diff with context from one file,
+  in chunks, through to its last line. Use the BASE you recorded before dispatching the implementer —
   never `HEAD~1`, which silently truncates multi-commit tasks. Never
   dispatch a reviewer without a diff file.
-- Check the package's length before dispatching: `wc -l <printed path>`.
-  Past 2000 lines a reviewer's Read truncates the file by default, and both
-  reviewer prompts tell it to read the package once and to leave the changed
-  files alone, so it returns a verdict on the part it read with no sign the
-  rest existed. A package over 2000 lines means the task outgrew what the
-  plan predicted: append `Task <N>: oversize package (<L> lines)` to the
-  ledger and report the task to your human partner before dispatching
-  either reviewer.
+- A package has no size limit. `review-package` prints its line count,
+  and each reviewer confirms in its report that it read through the last
+  line. A report without that confirmation reviewed part of the change:
+  re-dispatch that reviewer.
 - The global-constraints block you hand each reviewer is its attention
   lens. Copy the binding requirements verbatim from the plan's Global
   Constraints section or the spec: exact values, exact formats, and the
@@ -443,10 +445,10 @@ Before the loop starts, two routes leave it immediately:
   before merge. A roll-up nobody reads is a silent discard. Minor findings
   never enter the loop.
 - A finding labeled plan-mandated — or any finding that conflicts with
-  what the plan's text requires — is the human's decision, like any plan
-  contradiction: present the finding and the plan text, ask which governs.
-  Do not dismiss the finding because the plan mandates it, and do not
-  dispatch a fix that contradicts the plan without asking.
+  what the plan's text requires — is your ruling. The plan governs unless
+  the finding shows that following it produces broken or incorrect code;
+  then the fix proceeds against the plan. Either way, append a `decision`
+  line. Do not dismiss the finding just because the plan mandates it.
 
 Everything else enters the loop. A fix round is one fix dispatch plus one scoped re-review. Five rounds maximum per task, counted across both reviewers' findings — the cap is per task, not per reviewer.
 
@@ -473,10 +475,11 @@ Never fix findings yourself in the controller session — your context stays cle
 - **Real, but nothing downstream builds on it:** park it the same way, with
   a ruling that says it's real and deferred.
 - **Real and load-bearing** — a later task builds on it, or it reveals a
-  plan defect: STOP. Append `Task <N>: BLOCKED — <reason>` and report to
-  your human partner with the finding, the plan text it collides with, and
-  the fix history. Parking a structural failure lets every dependent task
-  build on it and hands the final review a problem it cannot fix either.
+  plan defect: do not let dependents build on it blind. If a later task can
+  absorb the fix, amend that task (BLOCKED step 3) to account for the
+  finding. Otherwise park it as
+  `Task <N>: parked (load-bearing) — <finding> — ruling: <why>`; finishing
+  asks your human partner before squashing a run that carries one.
 
 Adjudicate only at the cap. Adjudicating earlier to end a loop is pre-judging with a different name. Every adjudication is a ledger entry — a silent discard is forbidden.
 
@@ -496,13 +499,13 @@ Never move to the next task while a review that ran has open Critical/Important 
 
 The final whole-branch review gets a package too: run `scripts/review-package PLAN_FILE BASE_SHA HEAD` (BASE_SHA = the base SHA you captured at the start) and include the printed path in the final review dispatch, so the final reviewer reads one file instead of re-deriving the branch diff with git commands. Dispatch at the sonnet tier — opus only in the rare design-heavy case (see Model Selection) — using `superpowers-ross:requesting-code-review`'s [code-reviewer.md](../requesting-code-review/code-reviewer.md). Point it at the ledger's deferred-minor and parked lines so it can triage which must be fixed before merge.
 
-If the final whole-branch review returns findings, dispatch ONE fix subagent with the complete findings list — not one fixer per finding. Per-finding fixers each rebuild context and re-run suites; a real session's final-review fix wave cost more than all its tasks combined. Then run exactly one scoped re-review of the fix wave (`scripts/review-package PLAN_FILE FIX_BASE HEAD`, [re-review-prompt.md](re-review-prompt.md)). Adjudicate any residual findings as in the task loop's breaker: park with rulings, or stop on load-bearing ones. There is no second fix wave — residual load-bearing findings surface to your human partner when finishing-a-development-branch presents the options.
+If the final whole-branch review returns findings, dispatch ONE fix subagent with the complete findings list — not one fixer per finding. Per-finding fixers each rebuild context and re-run suites; a real session's final-review fix wave cost more than all its tasks combined. Then run exactly one scoped re-review of the fix wave (`scripts/review-package PLAN_FILE FIX_BASE HEAD`, [re-review-prompt.md](re-review-prompt.md)). Adjudicate any residual findings as in the task loop's breaker: park each with a ruling, marking load-bearing ones `parked (load-bearing)`. There is no second fix wave and no stop.
 
 ## Finish
 
-When the final whole-branch review is clean and its fixes are merged, delete this plan's workspace (`rm -rf <workspace>`) — the git history is the record now. Sibling directories belong to other plans; leave them alone.
+When the final review's fixes and rulings are done, compile **Decisions made** from the ledger: every `decision`, `amended`, `abandoned` and `parked` line, one line each, or "none". Do this before deleting anything — the ledger is the only record of the rulings. Then delete this plan's workspace (`rm -rf <workspace>`) — the git history is the record now. Sibling directories belong to other plans; leave them alone.
 
-Then invoke `superpowers-ross:finishing-a-development-branch`, passing both the base SHA (or the `.tasks.json` path that holds it) and the plan/spec path — it squashes the work and summarizes.
+Print Decisions made in your final message, then invoke `superpowers-ross:finishing-a-development-branch`, passing the base SHA (or the `.tasks.json` path that holds it), the plan/spec path, and the Decisions made list — it squashes the work and summarizes.
 
 ## Common Rationalizations
 
@@ -521,7 +524,7 @@ Then invoke `superpowers-ross:finishing-a-development-branch`, passing both the 
 | "Ledger bookkeeping is overhead" | The ledger is what survives compaction. Controllers without one have re-dispatched entire completed task sequences. |
 | "The ledger should capture my reasoning" | The ledger is a recovery map. State goes in one-liners; reasoning is diary that costs context on every later turn. |
 | "I'll note this process lesson in the ledger" | The workspace is deleted at Finish — the lesson dies there. Put it in your final report instead. |
-| "I'll check in with the user between tasks" | They asked you to execute the plan. Run to completion; stop only for BLOCKED or a genuinely blocking question. |
+| "I'll check in with the user between tasks" | They asked you to execute the plan. Never stop mid-run: decide, log, continue. Your rulings reach them in Decisions made. |
 
 ## Example Workflow
 
@@ -537,10 +540,9 @@ You: I'm using Subagent-Driven Development to execute this plan.
 Task 1: Hook installation script
 
 [Record BASE; run scripts/task-brief; dispatch implementer with the brief path]
-Implementer: "Before I begin - should the hook be installed at user or system level?"
-You: "User level (~/.config/superpowers/hooks/)"
 Implementer:
   - Implemented install-hook command, added tests (5/5), self-review added --force, committed
+  - Decisions: installs at user level (~/.config/superpowers/hooks/) — the brief names no level and the repo's other hooks are per-user
 
 [Run review-package PLAN_FILE BASE HEAD]
 [Dispatch spec reviewer (haiku) + code quality reviewer (sonnet) in PARALLEL, same diff path]
@@ -578,9 +580,10 @@ Re-reviewer: Magic number — ADDRESSED (src/recovery.js:7). New breakage: none.
 [Run review-package PLAN_FILE BASE_SHA HEAD; dispatch final code-reviewer (sonnet)]
 Final reviewer: All requirements met. Deferred minors triaged: none block merge.
 
+[Compile Decisions made from the ledger: none]
 [Delete this plan's workspace — the record now lives in git]
 
-Done! Using superpowers-ross:finishing-a-development-branch with baseSha + plan path.
+Done! Using superpowers-ross:finishing-a-development-branch with baseSha, plan path and Decisions made.
 ```
 
 ## Bounded Parallel Dispatch
@@ -598,7 +601,7 @@ Overlapping writers are forbidden, not parallelism itself — the sequential per
 After marking each task completed via `TaskUpdate`, update the `.tasks.json` file to stay in sync:
 
 1. Read `<plan-path>.tasks.json`
-2. Set the task's `"status"` to `"completed"`
+2. Set the task's `"status"` to `"completed"` (`"abandoned"` for an abandoned task)
 3. Set `"lastUpdated"` to current ISO timestamp
 4. Write the file back
 
