@@ -184,28 +184,6 @@ assert_command_output \
     CLAUDE_PLUGIN_ROOT="$REPO_ROOT" \
     bash "$WRAPPER_UNDER_TEST" session-start
 
-cursor_home="$(make_home cursor)"
-assert_command_output \
-    "Cursor emits top-level additional_context only" \
-    "cursor" \
-    "" \
-    "" \
-    "$cursor_home" \
-    CURSOR_PLUGIN_ROOT="$REPO_ROOT" \
-    CLAUDE_PLUGIN_ROOT="$REPO_ROOT" \
-    bash "$HOOK_UNDER_TEST"
-
-copilot_home="$(make_home copilot-cli)"
-assert_command_output \
-    "Copilot CLI emits top-level additionalContext only" \
-    "sdk" \
-    "" \
-    "" \
-    "$copilot_home" \
-    COPILOT_CLI=1 \
-    CLAUDE_PLUGIN_ROOT="$REPO_ROOT" \
-    bash "$HOOK_UNDER_TEST"
-
 legacy_home="$(make_home legacy-warning-removed)"
 mkdir -p "$legacy_home/.config/superpowers/skills"
 assert_command_output \
