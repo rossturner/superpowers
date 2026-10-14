@@ -228,9 +228,9 @@ cmd_audit() {
 cmd_bump() {
   local new_version="$1"
 
-  # Validate semver-ish format
-  if ! echo "$new_version" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+'; then
-    echo "error: '$new_version' doesn't look like a version (expected X.Y.Z)" >&2
+  # Fork versions are <obra version>-ross.<N>; never compared by semver order
+  if ! echo "$new_version" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+-ross\.[0-9]+$'; then
+    echo "error: '$new_version' doesn't look like a fork version (expected X.Y.Z-ross.N)" >&2
     exit 1
   fi
 

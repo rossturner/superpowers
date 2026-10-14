@@ -1,19 +1,17 @@
 {
-  "name": "superpowers-dev",
-  "description": "Development marketplace for Superpowers core skills library",
+  "name": "superpowers-ross-marketplace",
+  "description": "Marketplace for Superpowers (Ross's fork)",
   "owner": {
-    "name": "Jesse Vincent",
-    "email": "jesse@fsck.com"
+    "name": "Ross Taylor-Turner"
   },
   "plugins": [
     {
-      "name": "superpowers",
-      "description": "Core skills library for Claude Code: TDD, debugging, collaboration patterns, and proven techniques",
-      "version": "7.0.0",
+      "name": "superpowers-ross",
+      "description": "Superpowers (Ross's fork): Claude Code skills library for brainstorming, planning, subagent-driven development, TDD and debugging",
+      "version": "7.0.0-ross.1",
       "source": "./",
       "author": {
-        "name": "Jesse Vincent",
-        "email": "jesse@fsck.com"
+        "name": "Ross Taylor-Turner"
       }
     }
   ]
