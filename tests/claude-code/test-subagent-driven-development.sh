@@ -4,7 +4,7 @@
 #
 # No drill coverage: this test asks the agent to *describe* SDD (string-
 # matches its verbal explanation against expected keywords like
-# "self-review", "skeptical", "worktree", "Step 1", "loop"). Drill scenarios
+# "self-review", "skeptical", "current branch", "Step 1", "loop"). Drill scenarios
 # test behavior (real subagent dispatch, plan-following, review loops),
 # not description-recall. Kept by design.
 set -euo pipefail
@@ -150,25 +150,18 @@ fi
 
 echo ""
 
-# Test 8: Verify worktree requirement
-echo "Test 8: Worktree requirement..."
+# Test 8: Works on the current branch, including main
+echo "Test 8: Current branch only..."
 
-output=$(run_claude "What workflow skills are required before using subagent-driven-development? List any prerequisites or required skills." "$CLAUDE_PROMPT_TIMEOUT")
+output=$(run_claude "In subagent-driven-development, if I am on the main branch, does the skill switch branches, create a worktree, or ask before starting? Answer briefly." "$CLAUDE_PROMPT_TIMEOUT")
 
-if assert_contains "$output" "using-git-worktrees\|worktree" "Mentions worktree requirement"; then
+if assert_contains "$output" "current branch\|stays on\|works on\|does not switch\|doesn't switch\|no worktree\|not.*ask" "Works on the current branch without asking"; then
     : # pass
 else
     exit 1
 fi
 
-echo ""
-
-# Test 9: Verify main branch warning
-echo "Test 9: Main branch red flag..."
-
-output=$(run_claude "In subagent-driven-development, is it okay to start implementation directly on the main branch?" "$CLAUDE_PROMPT_TIMEOUT")
-
-if assert_contains "$output" "worktree\|feature.*branch\|not.*main\|never.*main\|avoid.*main\|don't.*main\|consent\|permission" "Warns against main branch"; then
+if assert_not_contains "$output" "using-git-worktrees" "Does not route through a worktree skill"; then
     : # pass
 else
     exit 1

@@ -16,7 +16,6 @@ Live in `tests/`. Currently:
 - `tests/claude-code/test-helpers.sh`, `analyze-token-usage.py` — utilities used by remaining bash tests.
 - `tests/claude-code/test-subagent-driven-development.sh` — agent-can-describe-SDD test (no quorum counterpart; tests description-recall, not behavior).
 - `tests/claude-code/test-subagent-driven-development-integration.sh` — extended SDD integration with token analysis (quorum covers the YAGNI subset; bash adds commit-count, Claude Code task-tracking, and token telemetry assertions).
-- `tests/claude-code/test-worktree-native-preference.sh` — RED-GREEN-REFACTOR validation for worktree skill (quorum covers the PRESSURE phase; bash also covers RED/GREEN baselines).
 - `tests/explicit-skill-requests/` — Haiku-specific, multi-turn, and skill-name-prompted tests not covered by quorum.
 - `tests/diagnosing-superpowers/test-skill-structure.sh` — structural checks for the diagnosing-superpowers skill (frontmatter, referenced files, leak scan, word budget); behavior-scenario eval records are kept by the maintainer outside the repo.
 
