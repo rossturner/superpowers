@@ -1,23 +1,40 @@
 #!/usr/bin/env bash
 # Generate a review package: commit list, stat summary, and the net
-# diff with extended context, written to a file the reviewer reads in one
-# call. Using the recorded per-task BASE (not HEAD~1) keeps multi-commit
-# tasks intact.
+# diff with extended context, written to a file the reviewer reads in
+# chunks. Using the recorded per-task BASE (not HEAD~1) keeps multi-commit
+# tasks intact. Line 1 carries the package's total line count so the
+# reviewer knows where the end is.
 #
-# Usage: review-package PLAN_FILE BASE HEAD [OUTFILE]
-# Default OUTFILE: <repo-root>/.superpowers/sdd/<plan-basename>/review-<base7>..<head7>.diff
+# Usage: review-package [PLAN_FILE] BASE HEAD [OUTFILE]
+# Default OUTFILE with a plan: <repo-root>/.superpowers/sdd/<plan-basename>/review-<base7>..<head7>.diff
 # (named per range, so a re-review after fixes gets a distinct fresh file).
+# Default OUTFILE without a plan: a mktemp file outside the repo.
+# With three arguments, the first is taken as PLAN_FILE when it names an
+# existing file, otherwise the call is BASE HEAD OUTFILE.
 set -euo pipefail
 
-if [ $# -lt 3 ] || [ $# -gt 4 ]; then
-  echo "usage: review-package PLAN_FILE BASE HEAD [OUTFILE]" >&2
+usage() {
+  echo "usage: review-package [PLAN_FILE] BASE HEAD [OUTFILE]" >&2
   exit 2
-fi
+}
 
-plan=$1
-base=$2
-head=$3
-[ -f "$plan" ] || { echo "no such plan file: $plan" >&2; exit 2; }
+plan=
+out=
+case $# in
+  2) base=$1; head=$2 ;;
+  3)
+    if [ -f "$1" ]; then
+      plan=$1; base=$2; head=$3
+    else
+      base=$1; head=$2; out=$3
+    fi
+    ;;
+  4)
+    plan=$1; base=$2; head=$3; out=$4
+    [ -f "$plan" ] || { echo "no such plan file: $plan" >&2; exit 2; }
+    ;;
+  *) usage ;;
+esac
 
 git rev-parse --verify --quiet "$base" >/dev/null || { echo "bad BASE: $base" >&2; exit 2; }
 git rev-parse --verify --quiet "$head" >/dev/null || { echo "bad HEAD: $head" >&2; exit 2; }
@@ -27,17 +44,21 @@ git rev-parse --verify --quiet "$head" >/dev/null || { echo "bad HEAD: $head" >&
 git merge-base --is-ancestor "$base" "$head" || { echo "HEAD is not a descendant of BASE: ${base}..${head}" >&2; exit 3; }
 [ "$(git rev-list --count "${base}..${head}")" -gt 0 ] || { echo "empty commit range: ${base}..${head}" >&2; exit 3; }
 
-if [ $# -eq 4 ]; then
-  out=$4
-else
-  # Invoke via bash rather than direct exec: some extractors (Python zipfile)
-  # strip Unix exec bits when unpacking marketplace packages (#2040).
-  dir=$("${BASH:-bash}" "$(cd "$(dirname "$0")" && pwd)/sdd-workspace" "$plan")
-  out="$dir/review-$(git rev-parse --short "$base")..$(git rev-parse --short "$head").diff"
+if [ -z "$out" ]; then
+  if [ -n "$plan" ]; then
+    # Invoke via bash rather than direct exec: some extractors (Python zipfile)
+    # strip Unix exec bits when unpacking marketplace packages (#2040).
+    dir=$("${BASH:-bash}" "$(cd "$(dirname "$0")" && pwd)/sdd-workspace" "$plan")
+    out="$dir/review-$(git rev-parse --short "$base")..$(git rev-parse --short "$head").diff"
+  else
+    out=$(mktemp "${TMPDIR:-/tmp}/review-package.XXXXXX")
+  fi
 fi
 
+body=$(mktemp "${TMPDIR:-/tmp}/review-package-body.XXXXXX")
+trap 'rm -f "$body"' EXIT
+
 {
-  echo "# Review package: ${base}..${head}"
   echo
   echo "## Commits"
   git log --oneline "${base}..${head}"
@@ -47,7 +68,13 @@ fi
   echo
   echo "## Diff"
   git diff -U10 "${base}..${head}"
+} > "$body"
+
+lines=$(( $(wc -l < "$body" | tr -d ' ') + 1 ))
+{
+  echo "# Review package: ${base}..${head} (${lines} lines)"
+  cat "$body"
 } > "$out"
 
 commits=$(git rev-list --count "${base}..${head}")
-echo "wrote ${out}: ${commits} commit(s), $(wc -c < "$out" | tr -d ' ') bytes"
+echo "wrote ${out}: ${commits} commit(s), ${lines} lines, $(wc -c < "$out" | tr -d ' ') bytes"

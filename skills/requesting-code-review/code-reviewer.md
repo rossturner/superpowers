@@ -24,11 +24,21 @@ Subagent (general-purpose):
 
     **Base:** [BASE_SHA]
     **Head:** [HEAD_SHA]
+    **Diff file:** [DIFF_FILE]
 
-    ```bash
-    git diff --stat [BASE_SHA]..[HEAD_SHA]
-    git diff [BASE_SHA]..[HEAD_SHA]
-    ```
+    If no diff file was given, generate one: run
+    `bash ../subagent-driven-development/scripts/review-package [BASE_SHA] [HEAD_SHA]`
+    (the path is relative to the requesting-code-review skill's directory)
+    and read the file it prints. If that script is unavailable, fall back
+    to `git diff --stat [BASE_SHA]..[HEAD_SHA]` and
+    `git diff [BASE_SHA]..[HEAD_SHA]`.
+
+    Line 1 of the diff file states its total line count:
+    `# Review package: BASE..HEAD (<L> lines)`. Read it in ~1,000-line
+    chunks — Read with `offset` and `limit` — until a Read returns line L.
+    If a Read fails on size, halve the chunk and carry on. Read each part
+    once. Your report states "read through line <L>"; a report without that
+    statement is sent back.
 
     ## The spec is a vision document
 
@@ -105,6 +115,8 @@ Subagent (general-purpose):
 
     ## Output Format
 
+    Read through line <L> of <L>.
+
     ### Strengths
     [What's well done? Be specific.]
 
@@ -156,8 +168,11 @@ Subagent (general-purpose):
 - `[PLAN_OR_REQUIREMENTS]` — what it should do (plan file path, task text, or requirements)
 - `[BASE_SHA]` — starting commit
 - `[HEAD_SHA]` — ending commit
+- `[DIFF_FILE]` — the review package path printed by
+  `../subagent-driven-development/scripts/review-package [PLAN_FILE] BASE HEAD`;
+  leave empty and the reviewer generates one without a plan
 
-**Reviewer returns:** Strengths, Issues (Critical / Important / Minor), Recommendations, Assessment
+**Reviewer returns:** the line it read through, Strengths, Issues (Critical / Important / Minor), Recommendations, Assessment
 
 ## Example Output
 

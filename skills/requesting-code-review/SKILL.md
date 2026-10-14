@@ -25,19 +25,29 @@ Dispatch a code reviewer subagent to catch issues before they cascade. The revie
 
 **1. Get git SHAs:**
 ```bash
-BASE_SHA=$(git rev-parse HEAD~1)  # or: git merge-base origin/main HEAD
+BASE_SHA=$(git rev-parse HEAD~1)  # or the commit before the work began (see below)
 HEAD_SHA=$(git rev-parse HEAD)
 ```
+
+For a review of a whole run, BASE_SHA is the executor's recorded `Base:` —
+line 2 of the plan's ledger (`.superpowers/sdd/<plan>/progress.md`). For an
+ad-hoc review, it is the commit before the work began, as the caller states
+it.
+
+Package the range as a file for the reviewer:
+`bash ../subagent-driven-development/scripts/review-package BASE_SHA HEAD_SHA`
+from this skill's directory prints the path it wrote — that is DIFF_FILE.
 
 **2. Dispatch code reviewer subagent:**
 
 Dispatch a `general-purpose` subagent, filling the template at [code-reviewer.md](code-reviewer.md)
 
 **Placeholders:**
-- `{DESCRIPTION}` - Brief summary of what you built
-- `{PLAN_OR_REQUIREMENTS}` - What it should do
-- `{BASE_SHA}` - Starting commit
-- `{HEAD_SHA}` - Ending commit
+- `[DESCRIPTION]` - Brief summary of what you built
+- `[PLAN_OR_REQUIREMENTS]` - What it should do
+- `[BASE_SHA]` - Starting commit
+- `[HEAD_SHA]` - Ending commit
+- `[DIFF_FILE]` - The review package path (leave empty and the reviewer generates one)
 
 **3. Act on feedback:**
 - Fix Critical issues immediately
@@ -60,8 +70,10 @@ HEAD_SHA=$(git rev-parse HEAD)
   PLAN_OR_REQUIREMENTS: Task 2 from docs/superpowers/plans/deployment-plan.md
   BASE_SHA: a7981ec
   HEAD_SHA: 3df7661
+  DIFF_FILE: /tmp/review-package.Xa91Qe
 
 [Subagent returns]:
+  Read through line 318 of 318.
   Strengths: Clean architecture, real tests
   Issues:
     Important: Missing progress indicators

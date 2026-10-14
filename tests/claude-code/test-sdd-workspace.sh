@@ -158,13 +158,38 @@ PLAN
             ;;
     esac
 
-    rc=0
-    (cd "$repo" && "$SDD_SCRIPTS/review-package" HEAD~1 HEAD >/dev/null 2>&1) || rc=$?
-    if [[ "$rc" -eq 2 ]]; then
-        pass "review-package without a plan errors with exit 2"
+    # --- line 1 carries the package's total line count ---
+    local rp_header rp_lines
+    rp_header="$(head -n 1 "$rp_path")"
+    rp_lines="$(wc -l < "$rp_path" | tr -d ' ')"
+    if [[ "$rp_header" == "# Review package: HEAD~1..HEAD ($rp_lines lines)" ]]; then
+        pass "review-package line 1 states the package's total line count"
     else
-        fail "review-package without a plan errors with exit 2"
-        echo "    exit: $rc"
+        fail "review-package line 1 states the package's total line count"
+        echo "    header: $rp_header"
+        echo "    wc -l:  $rp_lines"
+    fi
+
+    # --- PLAN_FILE is optional: without it the package lands outside the repo ---
+    local rp_noplan rp_noplan_path
+    rp_noplan="$(cd "$repo" && "$SDD_SCRIPTS/review-package" HEAD~1 HEAD)"
+    rp_noplan_path="$(printf '%s\n' "$rp_noplan" | sed -n 's/^wrote \(.*\): [0-9].*$/\1/p')"
+    if [[ -s "$rp_noplan_path" && "$rp_noplan_path" != "$repo"/* \
+          && "$(head -n 1 "$rp_noplan_path")" == "# Review package: HEAD~1..HEAD ("*" lines)" ]]; then
+        pass "review-package without a plan writes a temp file outside the repo"
+    else
+        fail "review-package without a plan writes a temp file outside the repo"
+        echo "    got: $rp_noplan"
+    fi
+    rm -f "$rp_noplan_path"
+
+    local rp_noplan_out
+    rp_noplan_out="$(cd "$repo" && "$SDD_SCRIPTS/review-package" HEAD~1 HEAD "$TEST_ROOT/noplan.diff")"
+    if [[ -s "$TEST_ROOT/noplan.diff" && "$rp_noplan_out" == "wrote $TEST_ROOT/noplan.diff: "* ]]; then
+        pass "review-package reads three non-plan arguments as BASE HEAD OUTFILE"
+    else
+        fail "review-package reads three non-plan arguments as BASE HEAD OUTFILE"
+        echo "    got: $rp_noplan_out"
     fi
 
     local rp_explicit

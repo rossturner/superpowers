@@ -34,8 +34,15 @@ Subagent (general-purpose):
     **Head:** [HEAD_SHA]
     **Diff file:** [DIFF_FILE]
 
-    Read the diff file once — it contains the fix commits, a stat summary,
-    and the fix diff with surrounding context. Do not re-run git commands.
+    Line 1 of the diff file states its total line count:
+    `# Review package: BASE..HEAD (<L> lines)`. Read it in ~1,000-line
+    chunks — Read with `offset` and `limit` — until a Read returns line L.
+    If a Read fails on size, halve the chunk and carry on. Read each part
+    once. Your report states "read through line <L>"; a report without that
+    statement is sent back.
+
+    The diff file contains the fix commits, a stat summary, and the fix
+    diff with surrounding context. Do not re-run git commands.
     If the diff file is missing, fetch the diff yourself:
     `git diff --stat [FIX_BASE_SHA]..[HEAD_SHA]` and
     `git diff [FIX_BASE_SHA]..[HEAD_SHA]`.
@@ -73,9 +80,11 @@ Subagent (general-purpose):
 
     ## Output Format
 
-    Your final message is the report itself: begin directly with the first
-    finding's verdict. Every line is a verdict, a finding with file:line,
+    Your final message is the report itself: begin with "Read through line
+    <L> of <L>." and then directly with the first finding's verdict. Every line is a verdict, a finding with file:line,
     or a check you ran — no preamble, no process narration.
+
+    Read through line <L> of <L>.
 
     ### Finding Verdicts
 
@@ -102,7 +111,7 @@ Subagent (general-purpose):
 
 **Placeholders:**
 - `[MODEL]` — REQUIRED: reviewer model per SKILL.md Model Selection; scoped
-  re-reviews of small fix diffs take a cheap-to-mid tier
+  re-reviews take `haiku` or `sonnet`, scaled to the fix diff
 - `[BRIEF_FILE]` — the task brief file (same file the implementer worked from)
 - `[FINDINGS]` — the Critical/Important findings and spec gaps from the
   previous review, copied verbatim, one per bullet
@@ -111,5 +120,5 @@ Subagent (general-purpose):
 - `[HEAD_SHA]` — current commit
 - `[DIFF_FILE]` — the path `bash scripts/review-package PLAN_FILE FIX_BASE HEAD` printed
 
-**Re-reviewer returns:** per-finding verdicts (ADDRESSED / NOT ADDRESSED),
+**Re-reviewer returns:** the line it read through, per-finding verdicts (ADDRESSED / NOT ADDRESSED),
 new breakage in the fix diff, out-of-scope observations, and a round verdict.

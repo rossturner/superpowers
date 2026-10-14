@@ -35,9 +35,16 @@ Subagent (general-purpose):
     **Head:** [HEAD_SHA]
     **Diff file:** [DIFF_FILE]
 
-    Read the diff file once — it contains the commit list, a stat summary,
-    and the full diff with surrounding context, and it is your view of the
-    change. The diff's context lines ARE the changed files: do not Read a
+    Line 1 of the diff file states its total line count:
+    `# Review package: BASE..HEAD (<L> lines)`. Read it in ~1,000-line
+    chunks — Read with `offset` and `limit` — until a Read returns line L.
+    If a Read fails on size, halve the chunk and carry on. Read each part
+    once. Your report states "read through line <L>"; a report without that
+    statement is sent back.
+
+    The diff file contains the commit list, a stat summary, and the full
+    diff with surrounding context, and it is your view of the change.
+    The diff's context lines ARE the changed files: do not Read a
     changed file separately unless a hunk you must judge is cut off
     mid-function — and say so in your report. Do not re-run git commands.
     If the diff file is missing, fetch the diff yourself:
@@ -137,8 +144,8 @@ Subagent (general-purpose):
     "yes." A tight report that cites lines gives the controller everything
     it needs.
 
-    Your final message is the report itself: begin directly with the
-    spec-compliance verdict. Every line is a verdict, a finding with
+    Your final message is the report itself: begin with "Read through line
+    <L> of <L>." and then directly with the spec-compliance verdict. Every line is a verdict, a finding with
     file:line, or a check you ran — no preamble, no process narration,
     no closing summary.
 
@@ -154,11 +161,13 @@ Subagent (general-purpose):
     defect (a test that asserts nothing, verbatim duplication of a logic
     block), that IS a finding — report it as Important, labeled
     plan-mandated. The plan's authorship does not grade its own work; the
-    human decides.
+    controller rules.
     Acknowledge what was done well before listing issues — accurate praise
     helps the implementer trust the rest of the feedback.
 
     ## Output Format
+
+    Read through line <L> of <L>.
 
     ### Spec Compliance
 
@@ -201,7 +210,8 @@ Subagent (general-purpose):
 - `[HEAD_SHA]` — current commit
 - `[DIFF_FILE]` — REQUIRED: the path the controller wrote the review
   package to (`bash scripts/review-package PLAN_FILE BASE HEAD` prints the unique
-  path it wrote; the package never enters the controller's context)
+  path it wrote and its line count; the package never enters the
+  controller's context)
 
-**Reviewer returns:** Spec Compliance verdict (✅/❌/⚠️), Strengths, Issues
+**Reviewer returns:** the line it read through, Spec Compliance verdict (✅/❌/⚠️), Strengths, Issues
 (Critical/Important/Minor), Task quality verdict
