@@ -7,11 +7,9 @@ description: Use when you have a spec or requirements for a multi-step task, bef
 
 ## Overview
 
-Write implementation plans for an engineer who has not seen this codebase or this spec. Assume they write idiomatic code in the project's language once they know the exact interface and the exact test, and that they will make a reasonable choice wherever the plan leaves one open. What they cannot know is what you decided: which files, which names and signatures, which values from the spec, which tests prove each task. Document those. Give them the whole plan as bite-sized tasks. DRY. YAGNI. TDD. Frequent commits.
+Write implementation plans for an engineer who has not seen this codebase or this spec. Assume they write idiomatic code in the project's language once they know the exact interface and the exact test, and that they will make a reasonable choice wherever the plan leaves one open. What they cannot know is what you decided: which files, which names and signatures, which values from the spec, which tests prove each task. Document those. Give them the whole plan as one task per outcome. DRY. YAGNI. TDD.
 
 **Announce at start:** "I'm using the writing-plans skill to create the implementation plan."
-
-**Context:** If working in an isolated worktree, it should have been created via the `superpowers-ross:using-git-worktrees` skill at execution time.
 
 **Save plans to:** `docs/superpowers/plans/YYYY-MM-DD-<feature-name>.md`
 - (User preferences for plan location override this default)
@@ -29,16 +27,29 @@ Before defining tasks, map out which files will be created or modified and what 
 - Files that change together should live together. Split by responsibility, not by technical layer.
 - In existing codebases, follow established patterns. If the codebase uses large files, don't unilaterally restructure - but if a file you're modifying has grown unwieldy, including a split in the plan is reasonable.
 
-This structure informs the task decomposition. Each task should produce self-contained changes that make sense independently.
+This structure informs the task decomposition. Each task delivers one outcome that can be verified on its own.
 
-## Task Right-Sizing
+## Task Granularity
 
-A task is the smallest unit that carries its own test cycle and is worth a
-fresh reviewer's gate. When drawing task boundaries: fold setup,
-configuration, scaffolding, and documentation steps into the task whose
-deliverable needs them; split only where a reviewer could meaningfully
-reject one task while approving its neighbor. Each task ends with an
-independently testable deliverable.
+**One task per outcome.** The plan's Architecture paragraph names the
+outcomes, and it is the authority on what one outcome is. Draw task
+boundaries from it, then apply two tests:
+
+- **Merge test:** a task that cannot be verified on its own serves another
+  task's outcome and merges into it. Setup, configuration, scaffolding and
+  documentation steps fold into the task whose outcome needs them.
+- **Split test:** a task whose Goal needs more than one sentence holds two
+  outcomes and splits.
+
+**No size cap.** A task spans as many files and commits as its outcome
+takes. Neither size, file count nor commit count bounds it. TDD cycles
+(failing test, implementation, passing test, commit) repeat within a task;
+they are steps, not tasks.
+
+**What a task costs.** Every task costs a brief, an implementer dispatch, a
+review package and a reviewer dispatch, in series, plus a fix dispatch and
+a scoped re-review for each round of findings. A decomposition finer than
+the outcomes buys only wall-clock time and repeated context.
 
 ## Step Granularity
 
@@ -49,6 +60,8 @@ independently testable deliverable.
 - "Run the tests and make sure they pass" - step
 - "Commit" - step
 
+A task repeats this cycle as many times as its outcome needs.
+
 ## Plan Document Header
 
 **Every plan MUST start with this header:**
@@ -56,11 +69,13 @@ independently testable deliverable.
 ```markdown
 # [Feature Name] Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers-ross:subagent-driven-development (recommended) or superpowers-ross:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers-ross:subagent-driven-development or superpowers-ross:executing-plans, whichever the plan's author recommended, to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** [One sentence describing what this builds]
 
-**Architecture:** [2-3 sentences about approach]
+**Architecture:** [2-3 sentences about approach, naming the outcomes the
+work delivers. This paragraph is the authority on what one task is: one
+task per outcome named here.]
 
 **Tech Stack:** [Key technologies/libraries]
 
@@ -86,13 +101,21 @@ break the program. Write the list here, once, with the spec in front of
 you. Then, for each line, add the test that pins it to the task that
 owns the code, in that task's own step style.]
 
+## Left to the Builder
+
+[Every decision the plan leaves open, one line each, with the options and
+what should decide between them. The executor rules on each and logs the
+ruling; nothing here is a question for the user.]
+
 ---
 ```
 
 ## Task Structure
 
 ````markdown
-### Task N: [Component Name]
+### Task N: [Outcome]
+
+**Goal:** [One sentence: the outcome this task delivers]
 
 **Files:**
 - Create: `exact/path/to/file.py`
@@ -176,29 +199,43 @@ After writing the complete plan, look at the spec with fresh eyes and check the 
 
 If you find issues, fix them inline. No need to re-review — just fix and move on. If you find a spec requirement with no task, add the task.
 
-## Execution Handoff
+## Open Decisions
 
-After saving and self-reviewing the plan, link it for your human partner
-to read. If they have already explicitly supplied an execution method, ask
-them to review the plan and confirm it captures what they want; wait for that
-review before implementation, then use the preserved method. Otherwise, ask
-them to review the plan and choose an execution method before implementation.
+A plan never schedules a question for the user at execution time. No step
+says "ask the user", "confirm with your human partner" or "check before
+proceeding". Anything still open goes under Left to the Builder, and the
+executor rules on it.
 
-**When no execution method has already been supplied:**
+## Transient Artifacts
 
-**"Plan complete and saved to `docs/superpowers/plans/<filename>.md`. Please review the plan. Which execution approach would you prefer?**
+The spec and the plan are working documents, never the feature's
+documentation.
 
-- **Subagent-driven** - A fresh subagent implements each task and a fresh reviewer checks it before the next one starts, then a whole-branch review at the end. Most thorough; costs a fresh context per task and per review.
-- **Native** - I implement every task myself in this session, the way this harness runs work, then one fresh reviewer on the most capable model checks the whole branch. Cheapest and fastest; no independent review until the end. Runs well with a mid-tier session model, since the plan carries the design.
+- Nothing outside `docs/superpowers/` references the spec or the plan: no
+  code comment, README line, docstring or commit message points at them.
+  The plan's own `Spec:` line is inside `docs/superpowers/` and is fine.
+- The final task updates durable documentation (README, `docs/` outside
+  `docs/superpowers/`, docstrings) when the feature needs it. When it does
+  not, the plan says so: "No durable docs change."
 
-**For this plan I recommend <one of the two>, because <one sentence from the plan: how much the tasks depend on each other's interfaces, how many there are, what a shipped mistake would cost>. Does the plan capture what you want, and which approach should we use?"**
+## Ending
 
-**When an execution method has already been supplied:**
+After saving and self-reviewing the plan:
 
-**"Plan complete and saved to `docs/superpowers/plans/<filename>.md`. Please review the plan. Does it capture what you want?"**
+1. Commit the plan.
+2. Stop with exactly one message:
 
-**If Subagent-driven chosen:**
-- **REQUIRED SUB-SKILL:** Use superpowers-ross:subagent-driven-development
+**"Plan committed to `docs/superpowers/plans/<filename>.md`. Recommend `/compact`, then invoke `superpowers-ross:subagent-driven-development` — <one sentence why>."**
 
-**If Native chosen:**
-- **REQUIRED SUB-SKILL:** Use superpowers-ross:executing-plans
+or
+
+**"Plan committed to `docs/superpowers/plans/<filename>.md`. Recommend `/compact`, then invoke `superpowers-ross:executing-plans` — <one sentence why>."**
+
+Recommend exactly one. Native (`superpowers-ross:executing-plans`) fits a
+few tightly coupled tasks where a shipped mistake is cheap and per-task
+review adds little. Otherwise recommend subagent-driven development. The
+sentence why comes from the plan: how many tasks there are, how much they
+depend on each other's interfaces, what a shipped mistake would cost.
+
+No "please review the plan", no menu of options, no question. The message
+is the end of this skill.
