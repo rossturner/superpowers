@@ -80,9 +80,10 @@ time...", "If it could only do one of these well, which?", "What would
 make you wince if I got it wrong?" A guess they can correct ("I'm
 guessing this is because X keeps biting you?") often beats a question.
 
-**Offer recon.** Once you have a bit of grounding and looking would help,
-offer to go look: their codebase or project, their own files and data,
-or the web. Say what you'd look for. They decide whether you go.
+**Go look.** Once you have a bit of grounding and looking would help,
+go look without asking first: read their codebase or project, and search
+the web. Read files outside the project only where they've pointed you
+to them. Then say briefly what you looked for and what you found.
 
 **Think wide privately.** Before you propose anything, come up with
 several ideas and drop the weak ones, including any that fight what
@@ -118,7 +119,8 @@ questions about the next part. Playback and questions alternate through
 the whole conversation; the last chunk covers whatever is left.
 
 Mark anything you're guessing as your guess; only what they said goes in
-as theirs. End each chunk by asking what's wrong or missing.
+as theirs. End each chunk by asking what's wrong or missing. Once every
+part has been played back and corrected, their yes approves the design.
 
 Before you send a chunk, check it: does it describe something they'll
 look at, like a page, a screen, a schedule, or a printout? If so, and
@@ -135,7 +137,7 @@ words. They can override it.
 |------|----------------------|------|
 | A quick, clear task | the request itself | do it |
 | A small change | in chat | build it through the normal workflow |
-| A project with a written design | a written design document | a full plan (for software: superpowers-ross:writing-plans) |
+| A project with a written design | played back in chat, recorded in a written design document | a full plan (for software: superpowers-ross:writing-plans) |
 
 If it grows mid-task, stop, say so, and step up a size.
 
@@ -144,8 +146,10 @@ order, and brainstorm them one at a time.
 
 ## The Written Design
 
-For a project, write a plain document a talented builder in the domain
-could plan from without going back to your human partner. Cover:
+For a project, once they've approved the design, write a plain document
+a talented builder in the domain could plan from without going back to
+your human partner. It records what they approved; it isn't a second
+thing to approve. Cover:
 
 - intent and the why
 - goals, non-goals, anti-goals
@@ -154,14 +158,28 @@ could plan from without going back to your human partner. Cover:
 - what's left to the builder
 
 **Where it goes:** in a software repo,
-`docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md`, committed.
-Otherwise, ask. Your human partner's preferences override both.
+`docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md`. Otherwise, where
+they say. Your human partner's preferences override both. Commit it as
+soon as it's written; don't review it yourself first, the panel is the
+review.
 
-**Builder check:** dispatch a fresh subagent with
-`builder-check-prompt.md` in this directory. When you tell your human
-partner you're writing it up, say a reviewer will read it first and you
-may come back once with a few questions. Don't hand over the document
-until the check is back. Sort what the builder asks into three piles:
+The document is a working document. Nothing outside `docs/superpowers/`
+links to it, and no later work updates it.
+
+**Spec panel:** dispatch reviewer subagents in parallel with
+`spec-panel-prompt.md` in this directory, one per lens, all in one
+message. Don't set a model; they run at this session's tier. The builder
+lens is always on the panel: a talented builder in the domain who has to
+plan from the document and can't ask. Add one to three more lenses
+chosen to fit this design. When you tell your human partner you're
+writing it up, say a few reviewers will read it first and you may come
+back once with a few questions.
+
+Without a subagent tool, read the document through each lens yourself,
+one lens at a time. That's the panel run by hand, not a self-review.
+
+Merge what the lenses report, then fix clear errors and contradictions
+directly, and sort the questions into three piles:
 
 - **Answered already** by the conversation or the project: put the answer
   in the document.
@@ -170,15 +188,23 @@ until the check is back. Sort what the builder asks into three piles:
 - **Theirs:** only your human partner can answer it, and the answer changes
   what gets built.
 
-Bring the "theirs" pile in one message, most important first. Update the
-document with their answers, then hand it over with a short list of the
-calls you made so they can check those while reading. That's the only
-round of questions the check produces. Without a subagent tool, read the
-document as that builder yourself.
+Bring the "theirs" pile in one AskUserQuestion round, most important
+first, at most four questions. Settle anything past four yourself and
+mark it in the document as your call. That's the only round of questions
+the panel produces. Update the document with their answers and commit
+the revisions as a second commit, not an amend.
+
+Then report the short list of calls you made, so they can check them,
+and move straight on: for software, invoke
+superpowers-ross:writing-plans. Don't ask them to review the document;
+they approved the design when you played it back. Outside software
+there's no writing-plans hand-off; the plan comes next, with them.
 
 <HARD-GATE>
 Nothing gets built until your human partner approves the full
-description: in chat for a small change, the document for a project.
+description as you played it back in conversation: the chat description
+for a small change, the playback for a project. The written document
+records what they approved; there's no separate approval of it.
 Building includes writing product code, scaffolding, installing
 dependencies, creating projects, and invoking an implementation skill.
 Reading and exploring are fine.
@@ -188,8 +214,9 @@ and the gate goes with it. A spike they said yes to may be built; it
 stays labeled throwaway, and keeping what it produced is a new request
 that comes back through this gate.
 
-After a project's document is approved, the next step is the plan. For
-software, invoke superpowers-ross:writing-plans and no other skill.
+After a project's design is approved, write the document and run the
+panel; the next step is the plan. For software, invoke
+superpowers-ross:writing-plans and no other skill.
 </HARD-GATE>
 
 ## Red Flags
@@ -199,7 +226,9 @@ software, invoke superpowers-ross:writing-plans and no other skill.
 | "I'll offer options to save them effort" | Options steer. Ask them to describe it first. |
 | "I'll fill in sensible defaults" | Good. Say them out loud. A default they never heard is one they couldn't reject. |
 | "I should explain the process first" | Ask your question. The process shows itself. |
-| "They said 'sounds good' to the idea" | Approval covers what you showed them. A description you haven't written isn't approved. |
+| "They said 'sounds good' to the idea" | Approval covers what you showed them. A part you haven't played back isn't approved. |
+| "I'll ask them to look over the document" | They approved the design when you played it back. Report your calls and move on. |
+| "The design is clear, the builder lens is enough" | The builder lens is the floor. Add the lenses this design needs. |
 | "The spike works, I'll keep building on it" | Keeping it is a new request. Back through the gate. |
 
 ## Visual Companion
