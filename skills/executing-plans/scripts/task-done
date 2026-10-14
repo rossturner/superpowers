@@ -6,7 +6,9 @@
 #
 # Usage: task-done PLAN_FILE TASK_NUMBER BASE -- TEST_COMMAND [ARGS...]
 #   BASE is the SHA task-start printed; the completion line records BASE..HEAD.
-# Exit: the test command's exit status.
+# The ledger must already exist with its `Base:` line (written at setup);
+# task-done never creates one.
+# Exit: the test command's exit status; 2 on bad arguments or a missing ledger.
 set -euo pipefail
 
 if [ $# -lt 5 ] || [ "$4" != "--" ]; then
@@ -25,6 +27,15 @@ git rev-parse --verify --quiet "$base" >/dev/null || { echo "bad BASE: $base" >&
 dir=$("$sdd/sdd-workspace" "$plan")
 log="$dir/task-${n}-tests.log"
 ledger="$dir/progress.md"
+
+if [ ! -f "$ledger" ]; then
+  echo "task-done: no ledger at $ledger; create it at setup with its identity and Base: lines first" >&2
+  exit 2
+fi
+if ! grep -q '^Base: [0-9a-f]\{40\}$' "$ledger"; then
+  echo "task-done: ledger $ledger has no 'Base: <sha>' line; write it at setup before any task" >&2
+  exit 2
+fi
 
 # Render the command the way a person would type it, for the ledger line.
 cmd=""
@@ -46,7 +57,6 @@ if [ "$rc" -ne 0 ]; then
 fi
 
 last=$(grep -v '^[[:space:]]*$' "$log" | tail -n 1) || last="(no output)"
-[ -f "$ledger" ] || printf '# SDD ledger — plan: %s\n' "$plan" > "$ledger"
 line="Task $n: complete (commits $(git rev-parse --short=7 "$base")..$(git rev-parse --short=7 HEAD), tests: $cmd → $last)"
 printf '%s\n' "$line" >> "$ledger"
 echo "ledger: $line"

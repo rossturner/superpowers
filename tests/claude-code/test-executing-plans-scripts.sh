@@ -2,7 +2,7 @@
 # Tests for executing-plans' bookkeeping helpers: scripts/task-start extracts
 # the brief and records BASE in one call; scripts/task-done runs the task's
 # test command, records the result in the ledger, and refuses to record a
-# failing task.
+# failing task or one whose ledger (with its Base: line) was not created at setup.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -82,13 +82,43 @@ PLAN
         fail "task-start writes the brief file"
     fi
 
-    # --- task-done: records a passing task ---
     ( cd "$repo" && echo x > work.txt && git add work.txt && git "${git_id[@]}" commit -qm "task 1" )
     local head
     head="$(cd "$repo" && git rev-parse HEAD)"
+    local ledger="$repo/.superpowers/sdd/plan/progress.md"
+    local marker="$TEST_ROOT/ran"
+
+    # --- task-done: refuses when the ledger is missing ---
+    rc=0
+    out="$(cd "$repo" && "$EP_SCRIPTS/task-done" plan.md 1 "$base" -- touch "$marker" 2>&1)" || rc=$?
+    if [[ "$rc" -eq 2 && ! -e "$ledger" && ! -e "$marker" ]]; then
+        pass "task-done without a ledger exits 2, creates none, runs nothing"
+    else
+        fail "task-done without a ledger exits 2, creates none, runs nothing (rc=$rc)"
+        echo "    got: $out"
+    fi
+
+    # --- task-done: refuses when the ledger has no Base: line ---
+    printf '# SDD ledger — plan: plan.md\n' > "$ledger"
+    rc=0
+    out="$(cd "$repo" && "$EP_SCRIPTS/task-done" plan.md 1 "$base" -- touch "$marker" 2>&1)" || rc=$?
+    if [[ "$rc" -eq 2 && ! -e "$marker" ]] && ! grep -q "Task 1: complete" "$ledger"; then
+        pass "task-done with a ledger lacking Base: exits 2 and records nothing"
+    else
+        fail "task-done with a ledger lacking Base: exits 2 and records nothing (rc=$rc)"
+        echo "    got: $out"
+    fi
+    if [[ "$out" == *"Base:"* ]]; then
+        pass "task-done names the missing Base: line in its error"
+    else
+        fail "task-done names the missing Base: line in its error"
+        echo "    got: $out"
+    fi
+
+    # --- task-done: records a passing task ---
+    printf '# SDD ledger — plan: plan.md\nBase: %s\n' "$base" > "$ledger"
     out="$(cd "$repo" && "$EP_SCRIPTS/task-done" plan.md 1 "$base" -- sh -c 'echo "Ran 3 tests"; echo OK')"
     rc=$?
-    local ledger="$repo/.superpowers/sdd/plan/progress.md"
     local expected="Task 1: complete (commits ${base:0:7}..${head:0:7}, tests: sh -c 'echo \"Ran 3 tests\"; echo OK' → OK)"
     if [[ -f "$ledger" ]] && grep -qF "$expected" "$ledger"; then
         pass "task-done appends the completion line with commit range and test result"
