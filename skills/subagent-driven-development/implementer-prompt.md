@@ -27,6 +27,8 @@ Subagent (general-purpose):
     code already uses. Nobody is waiting to answer questions; record each
     call under **Decisions** in your report (what you decided, and why) and
     keep working. Routine decisions do not make a report DONE_WITH_CONCERNS.
+    Where a skill you load (such as TDD's exceptions) says to ask your human
+    partner, make the call yourself and record it under Decisions instead.
 
     Never invent an external fact: a credential, an account, a third-party
     service the brief does not name. If the task needs one, that is

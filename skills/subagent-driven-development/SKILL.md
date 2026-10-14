@@ -1,6 +1,6 @@
 ---
 name: subagent-driven-development
-description: Use when executing implementation plans with independent tasks in the current session
+description: Use when executing implementation plans in the current session — any plan except a few tightly coupled tasks where a shipped mistake is cheap, which superpowers-ross:writing-plans routes to executing-plans
 ---
 
 # Subagent-Driven Development
@@ -47,18 +47,18 @@ ruled and ledgered the same way.
 ```dot
 digraph when_to_use {
     "Have implementation plan?" [shape=diamond];
-    "Tasks mostly independent?" [shape=diamond];
-    "writing-plans recommended Native, or no subagent tool?" [shape=diamond];
+    "Few tasks, tightly coupled, cheap to get wrong (writing-plans recommended Native)?" [shape=diamond];
+    "Subagent tool available?" [shape=diamond];
     "subagent-driven-development" [shape=box];
     "superpowers-ross:executing-plans (Native)" [shape=box];
     "Brainstorm and write a plan first" [shape=box];
 
-    "Have implementation plan?" -> "Tasks mostly independent?" [label="yes"];
+    "Have implementation plan?" -> "Few tasks, tightly coupled, cheap to get wrong (writing-plans recommended Native)?" [label="yes"];
     "Have implementation plan?" -> "Brainstorm and write a plan first" [label="no"];
-    "Tasks mostly independent?" -> "writing-plans recommended Native, or no subagent tool?" [label="yes"];
-    "Tasks mostly independent?" -> "superpowers-ross:executing-plans (Native)" [label="no - tightly coupled"];
-    "writing-plans recommended Native, or no subagent tool?" -> "superpowers-ross:executing-plans (Native)" [label="yes"];
-    "writing-plans recommended Native, or no subagent tool?" -> "subagent-driven-development" [label="no"];
+    "Few tasks, tightly coupled, cheap to get wrong (writing-plans recommended Native)?" -> "superpowers-ross:executing-plans (Native)" [label="yes"];
+    "Few tasks, tightly coupled, cheap to get wrong (writing-plans recommended Native)?" -> "Subagent tool available?" [label="no - including other coupled plans"];
+    "Subagent tool available?" -> "subagent-driven-development" [label="yes"];
+    "Subagent tool available?" -> "superpowers-ross:executing-plans (Native)" [label="no"];
 }
 ```
 
@@ -153,9 +153,12 @@ a ledger file, not only in todos.
   every artifact for THIS plan: ledger, briefs, reports, review packages.
   Another plan's directory is never yours to read or write.
 - Check for this plan's ledger at `<workspace>/progress.md`. If its first
-  line names your plan file, tasks with a `Task <N>: complete` or
-  `Task <N>: Ruling: abandoned` line are DONE — do not re-dispatch them;
-  resume at the first task without one. A task whose last line is a fix
+  line names your plan file, a task is DONE when the ledger has a
+  `Task <N>: complete` line, a `Task <N>: Ruling: abandoned` line, or a
+  `Task <N>: Ruling: unverified` line that ends with `(commits …)` — do
+  not re-dispatch it; resume at the first task with none of these. The
+  ledger is shared with superpowers-ross:executing-plans, so honour all
+  three whichever executor wrote them. A task whose last line is a fix
   round is mid-loop: resume the loop at the next round. A ledger whose first line names a different plan file — or a stray
   ledger at the old flat path `.superpowers/sdd/progress.md` — is another
   plan's progress: leave it in place and start your own, fresh.
@@ -243,7 +246,10 @@ constant change, or field addition repeated across files — do not dispatch
 one subagent per task. Compose ONE dispatch brief listing every file and
 its change, send the whole batch to a single subagent, and review its diff
 as one unit. Reserve one-dispatch-per-task for work that needs its own
-judgment, its own tests, or its own review surface.
+judgment, its own tests, or its own review surface. Ledger a batch so the
+ranges still chain: the first task in it gets the completion line with
+the batch's range, `(commits <a7>..<b7>, ...)`, and every other task in it
+gets `(commits <b7>..<b7>, batched with Task <first>)`.
 
 Everything you paste into a dispatch prompt — and everything a subagent
 prints back — stays resident in your context for the rest of the session
@@ -319,8 +325,8 @@ costs if wrong>`.
 **BLOCKED:** The implementer cannot complete the task. Climb this ladder in order; skip a rung only when it plainly cannot help (more context for a blocker that is not about context):
 1. **More context, same model** — answer the blocker from the spec, plan and code, and re-dispatch.
 2. **One model tier up** — re-dispatch on the next tier (`haiku` → `sonnet` → `opus`).
-3. **Amend the task once** — write the amendment into the task's brief file, ledger it as `Task <N>: Ruling: amended — <what changed> — <why> — <what it costs if wrong>`, and re-dispatch. Never edit the plan file and never renumber tasks. A task gets one amendment.
-4. **Abandon** — ledger `Task <N>: Ruling: abandoned — <why> — dependents: <each amended to stand alone, or abandoned too>`, ending the line with ` (commits <a7>..<b7>)` when the task left commits. Before dispatching each dependent, do what that line says: amend it once to stand alone (rung 3's rules), or abandon it in turn.
+3. **Amend the task once** — write the amendment into the task's brief file, ledger it as `Task <N>: Ruling: amended — <what changed> — <why> — <what it costs if wrong>`, and re-dispatch. Never edit the plan file and never renumber tasks. A task gets one amendment. `task-brief` rewrites the brief from the plan, so on resume re-apply any `Task <N>: Ruling: amended` line to the regenerated brief before dispatching.
+4. **Abandon** — if the task left uncommitted changes, commit them as `wip: abandoned Task <N>` (never reset or clean them away). Then ledger `Task <N>: Ruling: abandoned — <why> — dependents: <each amended to stand alone, or abandoned too>`, ending the line with ` (commits <a7>..<b7>)` when the task left commits — from the BASE you recorded before dispatching its implementer to HEAD, so the range covers the `wip:` commit. Before dispatching each dependent, do what that line says: amend it once to stand alone (rung 3's rules), or abandon it in turn.
 
 **Never** ignore an escalation or force the same model to retry without changes. If the implementer said it's stuck, something needs to change.
 
@@ -394,7 +400,7 @@ Before the loop starts, two routes leave it immediately:
 - Record Minor findings in the progress ledger as you go
   (`Task <N>: minor (deferred): <one-liner>`), and point the final
   whole-branch review at that list so it can triage which must be fixed
-  before merge. A roll-up nobody reads is a silent discard. Minor findings
+  before finishing. A roll-up nobody reads is a silent discard. Minor findings
   never enter the loop.
 - A finding labeled plan-mandated — or any finding that conflicts with
   what the plan's text requires — is yours to rule on: weigh the finding
@@ -437,6 +443,9 @@ minors — they never extend the loop.
 
 **After each round,** append to the ledger:
 `Task <N>: fix round <R>/5 (<X> addressed, <Y> open — <finding one-liners>; commits <a7>..<b7>)`
+— the round's own range, FIX_BASE to HEAD. It sits inside the task's
+completion range, so the chain finishing checks skips it: only completion,
+abandoned, unverified and `Final review: fixes` ranges are chained.
 
 Never fix findings yourself in the controller session — your context stays
 clean for coordination, and controller fixes skip review.
@@ -490,7 +499,7 @@ on `opus` (see Model Selection), using
 superpowers-ross:requesting-code-review's
 [code-reviewer.md](../requesting-code-review/code-reviewer.md). Point it at
 the ledger's deferred-minor and parked lines so it can triage which must be
-fixed before merge.
+fixed before finishing.
 
 If the final whole-branch review returns findings, dispatch ONE fix subagent
 with the complete findings list — not one fixer per finding.
@@ -524,7 +533,7 @@ made in secret.
 
 Put the plan file path in the same message. Do not delete this plan's
 workspace: superpowers-ross:finishing-a-development-branch reads `Base:`
-and the per-task ranges from its ledger, and deletes it when it is done.
+and the chained commit ranges from its ledger, and deletes it when it is done.
 Sibling directories belong to other plans; leave them alone.
 
 Use superpowers-ross:finishing-a-development-branch.
@@ -583,7 +592,7 @@ Task 2: Recovery modes
 Implementer: [No questions]
   - Added verify/repair modes
   - 8/8 tests passing
-  - Committed
+  - Committed a9b8c7d
 
 [Run review-package PLAN_FILE BASE HEAD; dispatch task reviewer with the printed path]
 Task reviewer: Spec ❌:
@@ -594,13 +603,13 @@ Task reviewer: Spec ❌:
 Implementer: Added progress reporting, extracted PROGRESS_INTERVAL constant.
   Re-ran test/recovery.test.js — 10/10 passing. Fix report appended.
 
-[Run review-package PLAN_FILE FIX_BASE HEAD; dispatch scoped re-review]
+[Run review-package PLAN_FILE a9b8c7d HEAD (FIX_BASE); dispatch scoped re-review]
 Re-reviewer: Read through line 96 of 96.
   Missing progress reporting — ADDRESSED (src/recovery.js:41).
   Magic number — ADDRESSED (src/recovery.js:7). New breakage: none.
   Verdict: all findings addressed.
 
-[Ledger: Task 2: fix round 1/5 (2 addressed, 0 open; commits d4e5f6a..b7c8d9e)]
+[Ledger: Task 2: fix round 1/5 (2 addressed, 0 open; commits a9b8c7d..b7c8d9e)]
 [Ledger: Task 2: complete (commits d4e5f6a..b7c8d9e, review clean)]
 
 ...

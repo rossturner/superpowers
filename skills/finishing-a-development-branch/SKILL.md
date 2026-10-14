@@ -69,9 +69,11 @@ and name the failed check in the summary.
    no `git add`, so they cannot be swept in. List any in the summary
    (`git status --porcelain` lines starting `??`) so they are not forgotten.
 4. **No merge commits:** `git rev-list --merges <Base>..HEAD` prints nothing.
-5. **Nothing interleaved (chain rule):** take every `(commits <a>..<b>` range
-   in the ledger, in ledger order — task completions, abandoned tasks that
-   left commits, and the `Final review: fixes` line. Then:
+5. **Nothing interleaved (chain rule):** take the `(commits <a>..<b>` range
+   of each of these lines, in ledger order — `Task <N>: complete`,
+   `Task <N>: Ruling: abandoned` and `Task <N>: Ruling: unverified` lines
+   that carry one, and the `Final review: fixes` line. Skip `fix round`
+   lines: their ranges sit inside their task's completion range. Then:
    - `prev = <Base>`;
    - for each range: `git rev-parse <a>` must equal `git rev-parse <prev>`;
      then `prev = <b>`;

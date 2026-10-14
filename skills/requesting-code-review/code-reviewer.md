@@ -26,12 +26,17 @@ Subagent (general-purpose):
     **Head:** [HEAD_SHA]
     **Diff file:** [DIFF_FILE]
 
-    If no diff file was given, generate one: run
-    `bash ../subagent-driven-development/scripts/review-package [BASE_SHA] [HEAD_SHA]`
-    (the path is relative to the requesting-code-review skill's directory)
-    and read the file it prints. If that script is unavailable, fall back
-    to `git diff --stat [BASE_SHA]..[HEAD_SHA]` and
-    `git diff [BASE_SHA]..[HEAD_SHA]`.
+    If no diff file was given, generate one outside the repo and read it:
+
+    ```bash
+    DIFF_FILE=$(mktemp)
+    { git log --oneline [BASE_SHA]..[HEAD_SHA]
+      git diff --stat [BASE_SHA]..[HEAD_SHA]
+      git diff -U10 [BASE_SHA]..[HEAD_SHA]; } > "$DIFF_FILE.body"
+    { echo "# Review package: [BASE_SHA]..[HEAD_SHA] ($(( $(wc -l < "$DIFF_FILE.body") + 1 )) lines)"
+      cat "$DIFF_FILE.body"; } > "$DIFF_FILE"
+    rm "$DIFF_FILE.body"; echo "$DIFF_FILE"
+    ```
 
     Line 1 of the diff file states its total line count:
     `# Review package: BASE..HEAD (<L> lines)`. Read it in ~1,000-line
@@ -169,8 +174,9 @@ Subagent (general-purpose):
 - `[BASE_SHA]` — starting commit
 - `[HEAD_SHA]` — ending commit
 - `[DIFF_FILE]` — the review package path printed by
-  `../subagent-driven-development/scripts/review-package [PLAN_FILE] BASE HEAD`;
-  leave empty and the reviewer generates one without a plan
+  `skills/subagent-driven-development/scripts/review-package [PLAN_FILE] BASE HEAD`,
+  generated before dispatch; if left empty, the reviewer falls back to
+  building one with git
 
 **Reviewer returns:** the line it read through, Strengths, Issues (Critical / Important / Minor), Recommendations, Assessment
 

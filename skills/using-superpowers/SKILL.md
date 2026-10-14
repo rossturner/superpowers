@@ -29,6 +29,7 @@ When multiple skills apply, process skills come first — they set the approach,
 
 - "Let's build X" → superpowers-ross:brainstorming first, then implementation skills.
 - "Fix this bug" → superpowers-ross:systematic-debugging first, then domain skills.
+- Plan written → superpowers-ross:subagent-driven-development or superpowers-ross:executing-plans, whichever superpowers-ross:writing-plans recommended.
 
 ## Red Flags
 

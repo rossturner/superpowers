@@ -65,9 +65,9 @@ goes on:
   so a fresh implementer per task would re-learn the same context), and a
   mistake that ships is cheap to find and fix — per-task review would add
   little the final review does not.
-- Your harness has no subagent tool (see the per-platform references in
-  `../using-superpowers/references/`). Never fabricate a dispatch; run
-  the plan here.
+- Your harness has no subagent tool (see
+  `../using-superpowers/references/claude-code-tools.md`). Never fabricate
+  a dispatch; run the plan here.
 
 A fully specified plan makes executing it here transcription plus testing:
 it runs well on a mid-tier session model, and the one place the most
@@ -145,8 +145,12 @@ and the new one resumes from the same ledger.
   artifact for THIS plan: ledger, briefs, review packages. Another plan's
   directory is never yours to read or write.
 - Check for this plan's ledger at `<workspace>/progress.md`. If its first
-  line names your plan file, tasks with a `Task <N>: complete` line are
-  DONE — do not redo them; resume at the first task without one. Their
+  line names your plan file, a task is DONE when the ledger has a
+  `Task <N>: complete` line, a `Task <N>: Ruling: abandoned` line, or a
+  `Task <N>: Ruling: unverified` line that ends with `(commits …)` — do
+  not redo it; resume at the first task with none of these. The ledger is
+  shared with superpowers-ross:subagent-driven-development, so honour all
+  three whichever executor wrote them. Their
   commits exist in git even when your context no longer remembers making
   them: after compaction, trust the ledger and `git log` over your own
   recollection. A ledger whose first line names a different plan file is
@@ -234,11 +238,15 @@ is no implementer to re-dispatch, so it is short:
    the workspace and ledger it as
    `Task <N>: Ruling: amended — <what changed> — <why>`. Never edit the
    plan file and never renumber tasks. One amendment; not a second.
-3. **Abandon.** Ledger
+   `task-start` rewrites the brief from the plan, so on resume re-apply
+   any `Task <N>: Ruling: amended` line to the regenerated brief before
+   working it.
+3. **Abandon.** If the task left uncommitted changes, commit them as
+   `wip: abandoned Task <N>` — never reset or clean them away. Then ledger
    `Task <N>: Ruling: abandoned — <why> — dependents: <each amended to stand alone, or abandoned too>`,
    ending with ` (commits <a7>..<b7>)` when the task left commits (the
-   range runs from its BASE to HEAD, so the ledger's ranges still chain).
-   Then take the next task.
+   range runs from its BASE to HEAD, covering the `wip:` commit, so the
+   ledger's ranges still chain). Then take the next task.
 
 Commit as the plan's commit steps say. A task that spans several commits
 is fine; BASE is what the review range is cut from, never `HEAD~1`.
@@ -350,7 +358,7 @@ only place the decisions you took on your human partner's behalf — and the
 findings you chose not to act on — reach them. End it with the plan path.
 
 Do not delete the workspace: superpowers-ross:finishing-a-development-branch
-reads `Base:` and the commit ranges from the ledger, and deletes the
+reads `Base:` and the chained commit ranges from the ledger, and deletes the
 workspace when it is done.
 
 Use superpowers-ross:finishing-a-development-branch.

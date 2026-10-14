@@ -34,9 +34,12 @@ line 2 of the plan's ledger (`.superpowers/sdd/<plan>/progress.md`). For an
 ad-hoc review, it is the commit before the work began, as the caller states
 it.
 
-Package the range as a file for the reviewer:
-`bash ../subagent-driven-development/scripts/review-package BASE_SHA HEAD_SHA`
-from this skill's directory prints the path it wrote — that is DIFF_FILE.
+Package the range as a file for the reviewer before dispatching — the
+reviewer expects one. Run the plugin's
+`skills/subagent-driven-development/scripts/review-package BASE_SHA HEAD_SHA`
+(`bash ../subagent-driven-development/scripts/review-package BASE_SHA HEAD_SHA`
+from this skill's directory); it prints the path it wrote — that is
+DIFF_FILE.
 
 **2. Dispatch code reviewer subagent:**
 
@@ -47,7 +50,7 @@ Dispatch a `general-purpose` subagent, filling the template at [code-reviewer.md
 - `[PLAN_OR_REQUIREMENTS]` - What it should do
 - `[BASE_SHA]` - Starting commit
 - `[HEAD_SHA]` - Ending commit
-- `[DIFF_FILE]` - The review package path (leave empty and the reviewer generates one)
+- `[DIFF_FILE]` - The review package path from `review-package` (the reviewer generates one only as a fallback when it is empty)
 
 **3. Act on feedback:**
 - Fix Critical issues immediately
