@@ -22,8 +22,9 @@ use superpowers-ross:subagent-driven-development end to end. The orchestrator
 dispatches its own implementers and reviewers per that skill's Model
 Selection; the workspace and ledger live on disk, so nothing is lost to
 the extra layer. Its final message must carry the "Rulings I made" list
-verbatim — that list is how the decisions reach your human partner, and
-you relay it, not summarize it.
+verbatim and the plan path — that list is how the decisions reach your
+human partner, and you relay it, not summarize it; the plan path is how
+finishing finds the plan's ledger and reads its `Base:`.
 
 Do this only for a whole plan. Nesting a single task's dispatch buys
 nothing and adds a seat.
