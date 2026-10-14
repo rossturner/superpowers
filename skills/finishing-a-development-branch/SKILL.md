@@ -1,21 +1,28 @@
 ---
 name: finishing-a-development-branch
-description: Use when implementation is complete, all tests pass, and you need to decide how to integrate the work
+description: Use when implementation is complete and all tests pass, to squash the work into one commit when it is safe and summarize what was done
 ---
 
 # Finishing a Development Branch
 
 ## Overview
 
-**Core principle:** Verify tests → Detect environment → Present options → Execute choice → Clean up.
+**Core principle:** Verify tests → Read the base → Squash only when every check passes → Clean up → Summarize and stop.
 
 **Announce at start:** "I'm using the finishing-a-development-branch skill to complete this work."
+
+This runs after subagent-driven-development or executing-plans, which already
+ran the whole-branch review. Do no review here. Everything needed comes from
+the plan path and its ledger, so this works from a fresh session too.
+
+**Plan path:** from the executor's final message, or from your human partner.
+Without one there is no ledger to read — treat it as "no ledger" in Step 2.
 
 ## Step 1: Verify Tests
 
 Run the project's full test suite (`npm test` / `cargo test` / `pytest` / `go test ./...`).
 
-**If tests fail**, report the failures and stop — the menu comes after a green suite:
+**If tests fail**, report the failures and stop — no squash, no cleanup:
 
 ```
 Tests failing (<N> failures). Must fix before completing:
@@ -25,201 +32,128 @@ Tests failing (<N> failures). Must fix before completing:
 
 **If tests pass:** continue to Step 2.
 
-## Step 2: Detect Environment
+## Step 2: Read the Base
+
+Run `../subagent-driven-development/scripts/sdd-workspace PLAN_FILE`, relative
+to this skill's directory, from the project's working directory:
 
 ```bash
-GIT_DIR=$(cd "$(git rev-parse --git-dir)" 2>/dev/null && pwd -P)
-GIT_COMMON=$(cd "$(git rev-parse --git-common-dir)" 2>/dev/null && pwd -P)
-# Capture now, while still inside the workspace — Step 5 changes directory
-# before cleanup (Step 6) needs this value
-WORKTREE_PATH=$(git rev-parse --show-toplevel)
+WS=$(bash <this skill's directory>/../subagent-driven-development/scripts/sdd-workspace PLAN_FILE)
+LEDGER="$WS/progress.md"
 ```
 
-This determines which menu to show and how cleanup works:
+Line 2 of the ledger is `Base: <40-char sha>`.
 
-| State | Menu | Cleanup |
-|-------|------|---------|
-| `GIT_DIR == GIT_COMMON` (normal repo) | Standard 3 options | No worktree to clean up |
-| `GIT_DIR != GIT_COMMON`, named branch | Standard 3 options | Provenance-based (see Step 6) |
-| `GIT_DIR != GIT_COMMON`, detached HEAD | Reduced 2 options (no merge) | Externally managed — leave in place |
+**If there is no ledger, or it has no `Base:` line, or that sha does not
+resolve** (`git rev-parse --verify <Base>^{commit}` fails): never guess the
+base. Skip Steps 3–4, state why ("no ledger for <plan>, squash skipped"), and
+go to Step 5. `sdd-workspace` creates the directory if it was missing, so
+Step 5 still removes it.
 
-## Step 3: Determine Base Branch
+Read the whole ledger now — Step 5 deletes it, and the summary needs its task
+lines and every `Ruling:` line.
 
-The base branch is whatever this work forked from — usually named in the
-plan, the conversation, or the branch's upstream. If it is not already
-known, ask: "This branch split from <your best guess> - is that correct?"
-Confirm before merging: merging into the wrong base is expensive to undo.
+## Step 3: Squash Checks
 
-## Step 4: Present Options
+Run every check, in order. The first that fails decides: leave history as is,
+and name the failed check in the summary.
 
-**Normal repo and named-branch worktree — present exactly these 3 options:**
+1. **Base is an ancestor of HEAD:** `git merge-base --is-ancestor <Base> HEAD`.
+   Fails → history was rewritten under the ledger.
+2. **Something to squash:** `git rev-list --count <Base>..HEAD` is 2 or more.
+   0 → nothing was committed; 1 → already one commit. Either way, no squash
+   (not a failure; say so).
+3. **Clean tree:** `git diff --quiet && git diff --cached --quiet`. This covers
+   tracked files only. Untracked files are not a blocker: `git reset --soft`
+   leaves them untracked and the commit in Step 4 takes the index as is, with
+   no `git add`, so they cannot be swept in. List any in the summary
+   (`git status --porcelain` lines starting `??`) so they are not forgotten.
+4. **No merge commits:** `git rev-list --merges <Base>..HEAD` prints nothing.
+5. **Nothing interleaved (chain rule):** take every `(commits <a>..<b>` range
+   in the ledger, in ledger order — task completions, abandoned tasks that
+   left commits, and the `Final review: fixes` line. Then:
+   - `prev = <Base>`;
+   - for each range: `git rev-parse <a>` must equal `git rev-parse <prev>`;
+     then `prev = <b>`;
+   - finally `git rev-parse <prev>` must equal `git rev-parse HEAD`.
 
-```
-Implementation complete. What would you like to do?
+   Ranges where `a == b` are fine. Any mismatch, or a short sha that does not
+   resolve, fails the check: commits exist in the range that no task accounts
+   for (work made outside the run), and squashing would bury them.
+6. **Nothing pushed:** `git branch -r --contains <oldest>` prints nothing,
+   where `<oldest>` is `git rev-list --reverse <Base>..HEAD | head -1`. Checking
+   the oldest suffices: check 4 made the range linear, so every commit in it
+   descends from `<oldest>`, and any remote branch holding a later commit also
+   holds `<oldest>`. Run `git fetch` first only if it needs no credentials
+   prompt; otherwise use the remote-tracking refs as they are and say so.
 
-1. Merge back to <base-branch> locally
-2. Push and create a Pull Request
-3. Keep the branch as-is (I'll handle it later)
+## Step 4: Squash
 
-Which option?
-```
-
-**Detached HEAD — present exactly these 2 options:**
-
-```
-Implementation complete. You're on a detached HEAD (externally managed workspace).
-
-1. Push as new branch and create a Pull Request
-2. Keep as-is (I'll handle it later)
-
-Which option?
-```
-
-Present the menu exactly as written — concise, with every option coming
-from the list above. Discarding the work happens only in response to your
-human partner explicitly asking for it (see "If your human partner asks to
-discard the work" below). Wait for their answer; the integration decision
-is theirs.
-
-## Step 5: Execute Choice
-
-### Option 1: Merge Locally
+Only when all checks in Step 3 passed:
 
 ```bash
-# Get main repo root for CWD safety
-MAIN_ROOT=$(git -C "$(git rev-parse --git-common-dir)/.." rev-parse --show-toplevel)
-cd "$MAIN_ROOT"
+git reset --soft <Base>
+git commit -F - <<'EOF'
+<subject: the plan's Goal, as a commit subject>
 
-# Merge first — verify success before removing anything
-git checkout <base-branch>
-git pull
-git merge <feature-branch>
+<what was built, one line per completed task or outcome>
 
-# Verify tests on merged result
-<test command>
+Not built: Task <N> (<name>) — abandoned: <why>
+EOF
 ```
 
-If tests fail on the merged result: stop, leave the worktree and branch in
-place, and investigate — nothing has been pushed, so the merge is local
-and recoverable.
+Derive the message from the plan's `**Goal:**` line and the ledger's completed
+tasks. Name every abandoned task as not built; omit the line when there are
+none. Follow the repo's commit-message conventions.
 
-Once the merged result is green: clean up the worktree (Step 6), then
-delete the branch:
+The spec and plan commits made before `Base` stay outside the squash. That is
+intended — do not widen the range to include them.
+
+**Never push or force-push.** The commit stays local.
+
+## Step 5: Clean Up
 
 ```bash
-git branch -d <feature-branch>
+rm -rf "$WS"
 ```
 
-### Option 2: Push and Create PR
+Delete only this plan's workspace directory — never `.superpowers/sdd/`
+itself, its `.gitignore`, or another plan's directory.
 
-```bash
-git push -u origin <feature-branch>
-# From a detached HEAD, name the new branch on the remote:
-# git push origin HEAD:refs/heads/<new-branch>
-```
+## Step 6: Summarize and Stop
 
-Then create the pull/merge request against <base-branch> with the forge's
-tooling — its CLI if one is available, or the creation URL most forges
-print when you push — following the repo's PR template and conventions if
-present, and report the URL to your human partner.
+Report:
 
-Keep the worktree — your human partner iterates on PR feedback there.
+- **What was built:** the plan's goal and the completed tasks.
+- **Key changes:** the main files and behaviours touched.
+- **Final commit:** the squash commit's sha and subject — or, when the squash
+  was skipped, the range `<Base7>..<HEAD7>` and which check failed (or why
+  there was no ledger).
+- **Rulings:** the executor's "Rulings I made" list, verbatim when you have
+  it; from a fresh session, every `Ruling:` line from the ledger. Abandoned
+  tasks, "left for you" actions, unverified tasks and residual load-bearing
+  findings first.
+- **Untracked files**, if Step 3 found any.
 
-### Option 3: Keep As-Is
-
-Report: "Keeping branch <name>. Worktree preserved at <path>."
-
-### If your human partner asks to discard the work
-
-This path exists only as a response to an explicit request to throw the
-work away. Confirm first:
-
-```
-This will permanently delete:
-- Branch <name>
-- All commits: <commit-list>
-- Worktree at <path>
-
-Type 'discard' to confirm.
-```
-
-Wait for that exact confirmation. When it arrives:
-
-```bash
-MAIN_ROOT=$(git -C "$(git rev-parse --git-common-dir)/.." rev-parse --show-toplevel)
-cd "$MAIN_ROOT"
-```
-
-Then clean up the worktree (Step 6) and force-delete the branch:
-
-```bash
-git branch -D <feature-branch>
-```
-
-## Step 6: Cleanup Workspace
-
-**Runs for Option 1 and confirmed discards.** Options 2 and 3 always
-preserve the worktree. Both callers have already changed directory to the
-main repo root — worktree removal must run from outside the worktree —
-and use the `GIT_DIR`/`GIT_COMMON`/`WORKTREE_PATH` values captured in
-Step 2, from before that directory change.
-
-**If `GIT_DIR == GIT_COMMON`:** Normal repo, no worktree to clean up. Done.
-
-**If `WORKTREE_PATH` is under `.worktrees/` or `worktrees/`:** Superpowers
-created this worktree — we own cleanup:
-
-```bash
-git worktree remove "$WORKTREE_PATH"
-git worktree prune  # Self-healing: clean up any stale registrations
-```
-
-**If removal is refused** (`contains modified or untracked files`): the
-worktree holds files that exist nowhere else — uncommitted plans, notes,
-or scratch work. Never `--force` on your own initiative. Show your human
-partner what is at stake and ask:
-
-```bash
-git -C "$WORKTREE_PATH" status --porcelain -uall
-```
-
-```
-Worktree removal refused — these files were never committed:
-
-<file list>
-
-1. Commit them to <branch> before cleanup
-2. Move them into <main repo root>
-3. Delete them (unrecoverable)
-
-Which?
-```
-
-Carry out the choice, then remove the worktree.
-
-**Otherwise:** The host environment owns this workspace — leave it in
-place. If your platform provides a workspace-exit tool, use it.
-
-## Quick Reference
-
-| Option | Merge | Push | Keep Worktree | Cleanup Branch |
-|--------|-------|------|---------------|----------------|
-| 1. Merge locally | yes | - | - | yes |
-| 2. Create PR | - | yes | yes | - |
-| 3. Keep as-is | - | - | yes | - |
-| Discard (explicit request only) | - | - | - | yes (force) |
+Then stop. No menu, no push or PR offer, no question.
 
 ## Common Rationalizations
 
 | Excuse | Reality |
 |--------|---------|
-| "Tests passed earlier this session" | Run the suite on the tree you are about to integrate. A green run only proves the tree it ran on. |
-| "They obviously want it merged" | Integration is your human partner's decision. Present the menu and wait. |
-| "They seem done with this feature — I'll offer to discard it" | The menu is complete as written. Discard happens only when your human partner asks for it in so many words. |
-| "'Yeah, get rid of it' counts as confirmation" | Only the typed word `discard` authorizes deletion. |
-| "The PR is up, so the worktree is clutter now" | PR feedback gets fixed in that worktree. It stays until the work lands. |
-| "This other worktree looks stale — I'll clean it too" | Clean up only worktrees under `.worktrees/` or `worktrees/`. Everything else belongs to the host. |
-| "Removal refused — `--force` is just finishing the cleanup" | The refusal means files exist only in that worktree. `--force` destroys them permanently. Show your human partner and ask. |
-| "The merged-result failure is probably flaky" | A failing merged result stops everything. Branch and worktree stay put while you investigate. |
-| "The base branch is obviously main" | Confirm the fork point or ask. Merging into the wrong base is expensive to undo. |
-| "The push was rejected — force-push will fix it" | A rejected push means the remote moved. Investigate; force-push only on your human partner's explicit request. |
+| "Tests passed earlier this session" | Run the suite on the tree you are about to squash. A green run only proves the tree it ran on. |
+| "I can infer the base" | The ledger's `Base:` is the only base. A guessed base squashes commits that were never part of this run. No ledger, no squash. |
+| "The range is close enough to linear" | A merge commit or a broken chain means commits no task accounts for. Squashing buries them. Leave history as is and say which check failed. |
+| "The push was rejected — force-push will fix it" | This skill never pushes. A rejected push in any later step means the remote moved; investigate, and force-push only on your human partner's explicit request. |
+
+## Red Flags
+
+**Never:**
+- Guess the base, or squash without a `Base:` from the ledger
+- Squash with failing tests
+- Squash when any Step 3 check failed
+- `git add` anything before the squash commit
+- Push or force-push
+- Ask your human partner whether to squash
+- End with a menu, a push/PR offer, or a question
+- Delete anything beyond this plan's workspace directory
