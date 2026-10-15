@@ -4,9 +4,7 @@ sections blank, contain multiple unrelated changes, or show no evidence
 of human involvement will be closed without review.
 -->
 
-> **This PR MUST target the `dev` branch, not `main`.** `main` is the
-> released branch; active work lands on `dev` first. PRs opened against
-> `main` will be asked to retarget `dev` before review.
+> **This PR MUST target the `dev` branch, not `main`.** `main` is the released branch; active work lands on `dev` first. PRs opened against `main` will be asked to retarget `dev` before review.
 
 ## Who is submitting this PR? (required)
 <!-- Required. PRs that omit this will be closed. We assume an agent wrote
@@ -107,8 +105,7 @@ paste the complete transcript here
 </details>
 
 ## Evaluation
-- What was the initial prompt you (or your human partner) used to start
-  the session that led to this change?
+- What was the initial prompt you (or your human partner) used to start the session that led to this change?
 - How many eval sessions did you run AFTER making the change?
 - How did outcomes change compared to before the change?
 
@@ -117,12 +114,9 @@ paste the complete transcript here
 
 ## Rigor
 
-- [ ] If this is a skills change: I used `superpowers:writing-skills` and
-      completed adversarial pressure testing (paste results below)
+- [ ] If this is a skills change: I used `superpowers:writing-skills` and completed adversarial pressure testing (paste results below)
 - [ ] This change was tested adversarially, not just on the happy path
-- [ ] I did not modify carefully-tuned content (Red Flags table,
-      rationalizations, "human partner" language) without extensive evals
-      showing the change is an improvement
+- [ ] I did not modify carefully-tuned content (Red Flags table, rationalizations, "human partner" language) without extensive evals showing the change is an improvement
 
 <!-- If you changed wording in skills that shape agent behavior, show your
      eval methodology and results. These are not prose — they are code. -->

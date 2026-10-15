@@ -45,13 +45,7 @@ bash scripts/start-server.sh --project-dir /path/to/project --open
 
 Save `screen_dir` and `state_dir` from the response. With `--open`, the browser opens itself when you push the first screen — you don't need to ask the user to open it, but still share the URL as a fallback (headless/remote setups won't auto-open).
 
-**The URL contains a session key (`?key=…`).** The server rejects any request
-without it, so always give the user the **complete** URL from the `url` field —
-never strip the query string, and never hand out a bare `http://host:port`. The
-key gates HTTP and WebSocket access so a stray browser tab or another machine on
-the network can't read the screens or inject events. After the first load the
-browser remembers the key via a cookie, so reloads and `/files/*` assets work
-without repeating it.
+**The URL contains a session key (`?key=…`).** The server rejects any request without it, so always give the user the **complete** URL from the `url` field — never strip the query string, and never hand out a bare `http://host:port`. The key gates HTTP and WebSocket access so a stray browser tab or another machine on the network can't read the screens or inject events. After the first load the browser remembers the key via a cookie, so reloads and `/files/*` assets work without repeating it.
 
 **Finding connection info:** The server writes its startup JSON to `$STATE_DIR/server-info`. If you launched the server in the background and didn't capture stdout, read that file to get the URL and port. When using `--project-dir`, check `<project>/.superpowers/brainstorm/` for the session directory.
 

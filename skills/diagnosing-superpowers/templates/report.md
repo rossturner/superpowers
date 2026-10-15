@@ -1,7 +1,6 @@
 # Session diagnosis: <session-id>
 
-Report path: ~/.superpowers/diagnosing-superpowers/<session-id>/report.md
-Written: <ISO timestamp>
+Report path: ~/.superpowers/diagnosing-superpowers/<session-id>/report.md Written: <ISO timestamp>
 
 ## 1. Problem statement (REQUIRED)
 
@@ -10,8 +9,7 @@ Written: <ISO timestamp>
 ## 2. Triage verdict (REQUIRED)
 
 <What the evidence shows happened around the reported problem. Prose, with
-`path:line` after every claim. State confidence: high / medium / low, and
-what would raise it. No statement about what superpowers should do.>
+`path:line` after every claim. State confidence: high / medium / low, and what would raise it. No statement about what superpowers should do.>
 
 ## 3. Environment (REQUIRED)
 
@@ -23,9 +21,7 @@ what would raise it. No statement about what superpowers should do.>
 - Other plugins, extensions, MCP servers:
 - Instruction files present (paths only):
 
-Label every environment field and skill observation as historical evidence,
-unverified snapshot, current observation, or unknown, and record its
-supporting evidence location.
+Label every environment field and skill observation as historical evidence, unverified snapshot, current observation, or unknown, and record its supporting evidence location.
 
 ## 4. Sessions examined (REQUIRED)
 
@@ -36,8 +32,7 @@ Rejected candidates: <id — path — why>, or "none".
 
 ## 5. Timeline (REQUIRED)
 
-One row per human-typed prompt. Events column lists skills invoked,
-subagents dispatched, compaction, errors, resumes, aborts.
+One row per human-typed prompt. Events column lists skills invoked, subagents dispatched, compaction, errors, resumes, aborts.
 
 | Turn | Line | Time | Request (one line) | Events |
 |---|---|---|---|---|
@@ -66,8 +61,7 @@ A dimension with nothing to report says `none found — checked: <what was check
 
 not indicated | possible | likely
 
-Evidence lines: <path:line list>. This section states involvement only. It
-does not name a defect and does not propose a change.
+Evidence lines: <path:line list>. This section states involvement only. It does not name a defect and does not propose a change.
 
 ## 8. Coverage notes (REQUIRED)
 

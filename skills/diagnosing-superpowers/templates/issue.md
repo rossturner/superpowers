@@ -17,8 +17,7 @@ Title: <skill or symptom>: <one-line observable> (<harness>)
 
 - [ ] I confirmed this issue does not occur without Superpowers installed
 
-The reporter has not tried reproducing without superpowers. Evidence for
-involvement is below; it does not establish cause.
+The reporter has not tried reproducing without superpowers. Evidence for involvement is below; it does not establish cause.
 
 ## What happened?
 
@@ -43,9 +42,7 @@ rewritten as `transcript line <n>`.>
 
 Session id(s): <ids>. Delivered local archive: <path, redaction level <level>
 | none built>. Attached bundle: <no claim; attach only after approval>.
-Superpowers involvement per the diagnosis report: <possible | likely>, with
-evidence at <transcript lines>. This report does not propose a fix.
+Superpowers involvement per the diagnosis report: <possible | likely>, with evidence at <transcript lines>. This report does not propose a fix.
 
 ---
-Filed with the `diagnosing-superpowers` skill. Model, harness, harness
-version, and installed plugins are listed above.
+Filed with the `diagnosing-superpowers` skill. Model, harness, harness version, and installed plugins are listed above.

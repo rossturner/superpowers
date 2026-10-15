@@ -11,13 +11,7 @@ Claude Code runs hook commands through a shell:
 - **Windows with Git Bash installed**: Git Bash
 - **Windows without Git Bash**: PowerShell (older versions used CMD.exe)
 
-Neither Windows fallback shell can parse our command string: PowerShell treats
-a leading quoted path as a string expression and errors on the next bareword,
-and CMD.exe's `/c` quoting rules strip the outer quotes when the path contains
-a metacharacter such as `(`. Our hooks therefore declare `"shell": "bash"`
-(supported since Claude Code 2.1.81; older versions ignore the key), which
-forces the Git Bash route and, when Git Bash is absent, produces an actionable
-"install Git for Windows" error instead of a shell parser failure.
+Neither Windows fallback shell can parse our command string: PowerShell treats a leading quoted path as a string expression and errors on the next bareword, and CMD.exe's `/c` quoting rules strip the outer quotes when the path contains a metacharacter such as `(`. Our hooks therefore declare `"shell": "bash"` (supported since Claude Code 2.1.81; older versions ignore the key), which forces the Git Bash route and, when Git Bash is absent, produces an actionable "install Git for Windows" error instead of a shell parser failure.
 
 This creates several challenges:
 
@@ -65,41 +59,27 @@ The path is quoted because `${CLAUDE_PLUGIN_ROOT}` may contain spaces.
 
 ## How `run-hook.cmd` Works at a High Level
 
-`run-hook.cmd` is a polyglot script: Windows treats the first block as batch
-commands, while Unix shells treat that block as a no-op heredoc and continue
-after it.
+`run-hook.cmd` is a polyglot script: Windows treats the first block as batch commands, while Unix shells treat that block as a no-op heredoc and continue after it.
 
-Do not copy an implementation from this document. Read `hooks/run-hook.cmd`
-directly when changing the dispatcher, and run `tests/hooks/test-session-start.sh`
-afterward.
+Do not copy an implementation from this document. Read `hooks/run-hook.cmd` directly when changing the dispatcher, and run `tests/hooks/test-session-start.sh` afterward.
 
 ### How it works on Windows (CMD.exe)
 
-1. The batch section validates the script name and resolves the hook directory
-   from the dispatcher's own location.
+1. The batch section validates the script name and resolves the hook directory from the dispatcher's own location.
 2. It tries bash in four places, in order:
    - `C:\Program Files\Git\bin\bash.exe`
    - `C:\Program Files (x86)\Git\bin\bash.exe`
-   - `%LOCALAPPDATA%\Programs\Git\bin\bash.exe` (a per-user Git for Windows
-     install), only when `LOCALAPPDATA` is set
-   - `bash` on `PATH` (MSYS2, Cygwin, or a non-default Git install), found by
-     running `%SystemRoot%\System32\where.exe $PATH:bash`, so neither `where`
-     nor `bash` is taken from the current directory. The WSL launchers
-     (`bash.exe` in `System32`, `Sysnative`, or
-     `%LOCALAPPDATA%\Microsoft\WindowsApps`) and extensionless matches are
-     skipped, since the launchers fail when no Linux distro is installed.
-3. If bash is found, it runs the named extensionless hook script from the hooks
-   directory and exits with the script's exit code.
-4. If no bash is found, the dispatcher exits `0` silently — the plugin
-   continues working, it just skips the hook.
+   - `%LOCALAPPDATA%\Programs\Git\bin\bash.exe` (a per-user Git for Windows install), only when `LOCALAPPDATA` is set
+   - `bash` on `PATH` (MSYS2, Cygwin, or a non-default Git install), found by running `%SystemRoot%\System32\where.exe $PATH:bash`, so neither `where` nor `bash` is taken from the current directory. The WSL launchers (`bash.exe` in `System32`, `Sysnative`, or `%LOCALAPPDATA%\Microsoft\WindowsApps`) and extensionless matches are skipped, since the launchers fail when no Linux distro is installed.
+3. If bash is found, it runs the named extensionless hook script from the hooks directory and exits with the script's exit code.
+4. If no bash is found, the dispatcher exits `0` silently — the plugin continues working, it just skips the hook.
 5. `exit /b` stops CMD before it reaches the Unix section.
 
 ### How it works on Unix (bash/sh)
 
 1. `: << 'CMDBLOCK'` opens a heredoc on a no-op command.
 2. The entire CMD batch block is consumed by the heredoc and ignored.
-3. After `CMDBLOCK`, bash resolves the script directory and `exec`s the named
-   extensionless script directly.
+3. After `CMDBLOCK`, bash resolves the script directory and `exec`s the named extensionless script directly.
 
 ### Key design decisions
 

@@ -8,8 +8,7 @@ When you fix a bug caused by invalid data, adding validation at one place feels 
 
 ## Why Multiple Layers
 
-Single validation: "We fixed the bug"
-Multiple layers: "We made the bug impossible"
+Single validation: "We fixed the bug" Multiple layers: "We made the bug impossible"
 
 Different layers catch different cases:
 - Entry validation catches most bugs

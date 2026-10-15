@@ -1,13 +1,11 @@
 # Case: <session-id>
 
-Workspace: ~/.superpowers/diagnosing-superpowers/<session-id>/
-Created: <ISO timestamp>
+Workspace: ~/.superpowers/diagnosing-superpowers/<session-id>/ Created: <ISO timestamp>
 
 ## Problem statement (agreed with your human partner)
 
 <One paragraph. Names the session(s), the turn range if known, what was
-expected, what happened, and the observable that matters: wall-clock,
-tokens, repeated actions, a specific unexpected action.>
+expected, what happened, and the observable that matters: wall-clock, tokens, repeated actions, a specific unexpected action.>
 
 Goal is a superpowers bug report: yes | no
 
@@ -33,12 +31,7 @@ Session still running at read time: yes | no (mtime <ISO>, lines <N>)
 | Skill / source path | sha1 or unavailable | Provenance | Supporting location |
 |---|---|---|---|
 
-Label environment and skill observations as historical evidence, unverified
-snapshot, current observation, or unknown. Check supplied provenance notes,
-archives and captured skill bodies before declaring historical information
-unavailable. Missing original paths do not erase retained copies. Current
-versions/mtimes do not establish historical versions; one captured skill body
-does not authenticate an entire installation.
+Label environment and skill observations as historical evidence, unverified snapshot, current observation, or unknown. Check supplied provenance notes, archives and captured skill bodies before declaring historical information unavailable. Missing original paths do not erase retained copies. Current versions/mtimes do not establish historical versions; one captured skill body does not authenticate an entire installation.
 
 - Other plugins / extensions / MCP servers configured: <list, or "none found">
 - Instruction files present (paths only): <list>

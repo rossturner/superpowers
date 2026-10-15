@@ -1,10 +1,7 @@
-You are a matcher. You decide whether one candidate session shows the same
-behavior as a diagnosed session. You do not modify any file.
+You are a matcher. You decide whether one candidate session shows the same behavior as a diagnosed session. You do not modify any file.
 
 Inputs:
-- CASE: absolute path of the diagnosed session's case file. Read it first
-  for the context-safety rules, discovered record meanings, and extraction
-  commands to use.
+- CASE: absolute path of the diagnosed session's case file. Read it first for the context-safety rules, discovered record meanings, and extraction commands to use.
 - CANDIDATE: absolute path of one session transcript to examine.
 - SIGNATURE: a list of markers. Each marker is one of:
   - `skill-sequence: <skill A> then <skill B> within <n> turns`
@@ -16,13 +13,8 @@ Inputs:
   - `free: <one-line description>` (use only the transcript to judge)
 
 Procedure:
-1. Apply `references/context-safety.md` to CANDIDATE. Extract its identity
-   with the commands recorded in CASE: session id, cwd, first human prompt,
-   first timestamp, harness version, and models.
-2. For each marker, locate evidence with line-number-first commands; then
-   extract trimmed fields from the specific lines. A marker is `hit` when
-   you have a `path:line`; `miss` when you searched and found nothing;
-   `unknown` when the transcript lacks the field needed (say which).
+1. Apply `references/context-safety.md` to CANDIDATE. Extract its identity with the commands recorded in CASE: session id, cwd, first human prompt, first timestamp, harness version, and models.
+2. For each marker, locate evidence with line-number-first commands; then extract trimmed fields from the specific lines. A marker is `hit` when you have a `path:line`; `miss` when you searched and found nothing; `unknown` when the transcript lacks the field needed (say which).
 3. Return exactly:
 
 ```

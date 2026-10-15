@@ -11,12 +11,9 @@ description: Use when implementation is complete and all tests pass, to squash t
 
 **Announce at start:** "I'm using the finishing-a-development-branch skill to complete this work."
 
-This runs after subagent-driven-development or executing-plans, which already
-ran the whole-branch review. Do no review here. Everything needed comes from
-the plan path and its ledger, so this works from a fresh session too.
+This runs after subagent-driven-development or executing-plans, which already ran the whole-branch review. Do no review here. Everything needed comes from the plan path and its ledger, so this works from a fresh session too.
 
-**Plan path:** from the executor's final message, or from your human partner.
-Without one there is no ledger to read — treat it as "no ledger" in Step 2.
+**Plan path:** from the executor's final message, or from your human partner. Without one there is no ledger to read — treat it as "no ledger" in Step 2.
 
 ## Step 1: Verify Tests
 
@@ -34,8 +31,7 @@ Tests failing (<N> failures). Must fix before completing:
 
 ## Step 2: Read the Base
 
-Run `../subagent-driven-development/scripts/sdd-workspace PLAN_FILE`, relative
-to this skill's directory, from the project's working directory:
+Run `../subagent-driven-development/scripts/sdd-workspace PLAN_FILE`, relative to this skill's directory, from the project's working directory:
 
 ```bash
 WS=$(bash <this skill's directory>/../subagent-driven-development/scripts/sdd-workspace PLAN_FILE)
@@ -44,50 +40,25 @@ LEDGER="$WS/progress.md"
 
 Line 2 of the ledger is `Base: <40-char sha>`.
 
-**If there is no ledger, or it has no `Base:` line, or that sha does not
-resolve** (`git rev-parse --verify <Base>^{commit}` fails): never guess the
-base. Skip Steps 3–4, state why ("no ledger for <plan>, squash skipped"), and
-go to Step 5. `sdd-workspace` creates the directory if it was missing, so
-Step 5 still removes it.
+**If there is no ledger, or it has no `Base:` line, or that sha does not resolve** (`git rev-parse --verify <Base>^{commit}` fails): never guess the base. Skip Steps 3–4, state why ("no ledger for <plan>, squash skipped"), and go to Step 5. `sdd-workspace` creates the directory if it was missing, so Step 5 still removes it.
 
-Read the whole ledger now — Step 5 deletes it, and the summary needs its task
-lines and every `Ruling:` line.
+Read the whole ledger now — Step 5 deletes it, and the summary needs its task lines and every `Ruling:` line.
 
 ## Step 3: Squash Checks
 
-Run every check, in order. The first that fails decides: leave history as is,
-and name the failed check in the summary.
+Run every check, in order. The first that fails decides: leave history as is, and name the failed check in the summary.
 
-1. **Base is an ancestor of HEAD:** `git merge-base --is-ancestor <Base> HEAD`.
-   Fails → history was rewritten under the ledger.
-2. **Something to squash:** `git rev-list --count <Base>..HEAD` is 2 or more.
-   0 → nothing was committed; 1 → already one commit. Either way, no squash
-   (not a failure; say so).
-3. **Clean tree:** `git diff --quiet && git diff --cached --quiet`. This covers
-   tracked files only. Untracked files are not a blocker: `git reset --soft`
-   leaves them untracked and the commit in Step 4 takes the index as is, with
-   no `git add`, so they cannot be swept in. List any in the summary
-   (`git status --porcelain` lines starting `??`) so they are not forgotten.
+1. **Base is an ancestor of HEAD:** `git merge-base --is-ancestor <Base> HEAD`. Fails → history was rewritten under the ledger.
+2. **Something to squash:** `git rev-list --count <Base>..HEAD` is 2 or more. 0 → nothing was committed; 1 → already one commit. Either way, no squash (not a failure; say so).
+3. **Clean tree:** `git diff --quiet && git diff --cached --quiet`. This covers tracked files only. Untracked files are not a blocker: `git reset --soft` leaves them untracked and the commit in Step 4 takes the index as is, with no `git add`, so they cannot be swept in. List any in the summary (`git status --porcelain` lines starting `??`) so they are not forgotten.
 4. **No merge commits:** `git rev-list --merges <Base>..HEAD` prints nothing.
-5. **Nothing interleaved (chain rule):** take the `(commits <a>..<b>` range
-   of each of these lines, in ledger order — `Task <N>: complete`,
-   `Task <N>: Ruling: abandoned` and `Task <N>: Ruling: unverified` lines
-   that carry one, and the `Final review: fixes` line. Skip `fix round`
-   lines: their ranges sit inside their task's completion range. Then:
+5. **Nothing interleaved (chain rule):** take the `(commits <a>..<b>` range of each of these lines, in ledger order — `Task <N>: complete`, `Task <N>: Ruling: abandoned` and `Task <N>: Ruling: unverified` lines that carry one, and the `Final review: fixes` line. Skip `fix round` lines: their ranges sit inside their task's completion range. Then:
    - `prev = <Base>`;
-   - for each range: `git rev-parse <a>` must equal `git rev-parse <prev>`;
-     then `prev = <b>`;
+   - for each range: `git rev-parse <a>` must equal `git rev-parse <prev>`; then `prev = <b>`;
    - finally `git rev-parse <prev>` must equal `git rev-parse HEAD`.
 
-   Ranges where `a == b` are fine. Any mismatch, or a short sha that does not
-   resolve, fails the check: commits exist in the range that no task accounts
-   for (work made outside the run), and squashing would bury them.
-6. **Nothing pushed:** `git branch -r --contains <oldest>` prints nothing,
-   where `<oldest>` is `git rev-list --reverse <Base>..HEAD | head -1`. Checking
-   the oldest suffices: check 4 made the range linear, so every commit in it
-   descends from `<oldest>`, and any remote branch holding a later commit also
-   holds `<oldest>`. Run `git fetch` first only if it needs no credentials
-   prompt; otherwise use the remote-tracking refs as they are and say so.
+   Ranges where `a == b` are fine. Any mismatch, or a short sha that does not resolve, fails the check: commits exist in the range that no task accounts for (work made outside the run), and squashing would bury them.
+6. **Nothing pushed:** `git branch -r --contains <oldest>` prints nothing, where `<oldest>` is `git rev-list --reverse <Base>..HEAD | head -1`. Checking the oldest suffices: check 4 made the range linear, so every commit in it descends from `<oldest>`, and any remote branch holding a later commit also holds `<oldest>`. Run `git fetch` first only if it needs no credentials prompt; otherwise use the remote-tracking refs as they are and say so.
 
 ## Step 4: Squash
 
@@ -104,12 +75,9 @@ Not built: Task <N> (<name>) — abandoned: <why>
 EOF
 ```
 
-Derive the message from the plan's `**Goal:**` line and the ledger's completed
-tasks. Name every abandoned task as not built; omit the line when there are
-none. Follow the repo's commit-message conventions.
+Derive the message from the plan's `**Goal:**` line and the ledger's completed tasks. Name every abandoned task as not built; omit the line when there are none. Follow the repo's commit-message conventions.
 
-The spec and plan commits made before `Base` stay outside the squash. That is
-intended — do not widen the range to include them.
+The spec and plan commits made before `Base` stay outside the squash. That is intended — do not widen the range to include them.
 
 **Never push or force-push.** The commit stays local.
 
@@ -119,8 +87,7 @@ intended — do not widen the range to include them.
 rm -rf "$WS"
 ```
 
-Delete only this plan's workspace directory — never `.superpowers/sdd/`
-itself, its `.gitignore`, or another plan's directory.
+Delete only this plan's workspace directory — never `.superpowers/sdd/` itself, its `.gitignore`, or another plan's directory.
 
 ## Step 6: Summarize and Stop
 
@@ -128,13 +95,8 @@ Report:
 
 - **What was built:** the plan's goal and the completed tasks.
 - **Key changes:** the main files and behaviours touched.
-- **Final commit:** the squash commit's sha and subject — or, when the squash
-  was skipped, the range `<Base7>..<HEAD7>` and which check failed (or why
-  there was no ledger).
-- **Rulings:** the executor's "Rulings I made" list, verbatim when you have
-  it; from a fresh session, every `Ruling:` line from the ledger. Abandoned
-  tasks, "left for you" actions, unverified tasks and residual load-bearing
-  findings first.
+- **Final commit:** the squash commit's sha and subject — or, when the squash was skipped, the range `<Base7>..<HEAD7>` and which check failed (or why there was no ledger).
+- **Rulings:** the executor's "Rulings I made" list, verbatim when you have it; from a fresh session, every `Ruling:` line from the ledger. Abandoned tasks, "left for you" actions, unverified tasks and residual load-bearing findings first.
 - **Untracked files**, if Step 3 found any.
 
 Then stop. No menu, no push or PR offer, no question.

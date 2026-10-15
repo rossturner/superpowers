@@ -31,25 +31,14 @@ This structure informs the task decomposition. Each task delivers one outcome th
 
 ## Task Granularity
 
-**One task per outcome.** The plan's Architecture paragraph names the
-outcomes, and it is the authority on what one outcome is. Draw task
-boundaries from it, then apply two tests:
+**One task per outcome.** The plan's Architecture paragraph names the outcomes, and it is the authority on what one outcome is. Draw task boundaries from it, then apply two tests:
 
-- **Merge test:** a task that cannot be verified on its own serves another
-  task's outcome and merges into it. Setup, configuration, scaffolding and
-  documentation steps fold into the task whose outcome needs them.
-- **Split test:** a task whose Goal needs more than one sentence holds two
-  outcomes and splits.
+- **Merge test:** a task that cannot be verified on its own serves another task's outcome and merges into it. Setup, configuration, scaffolding and documentation steps fold into the task whose outcome needs them.
+- **Split test:** a task whose Goal needs more than one sentence holds two outcomes and splits.
 
-**No size cap.** A task spans as many files and commits as its outcome
-takes. Neither size, file count nor commit count bounds it. TDD cycles
-(failing test, implementation, passing test, commit) repeat within a task;
-they are steps, not tasks.
+**No size cap.** A task spans as many files and commits as its outcome takes. Neither size, file count nor commit count bounds it. TDD cycles (failing test, implementation, passing test, commit) repeat within a task; they are steps, not tasks.
 
-**What a task costs.** Every task costs a brief, an implementer dispatch, a
-review package and a reviewer dispatch, in series, plus a fix dispatch and
-a scoped re-review for each round of findings. A decomposition finer than
-the outcomes buys only wall-clock time and repeated context.
+**What a task costs.** Every task costs a brief, an implementer dispatch, a review package and a reviewer dispatch, in series, plus a fix dispatch and a scoped re-review for each round of findings. A decomposition finer than the outcomes buys only wall-clock time and repeated context.
 
 ## Step Granularity
 
@@ -73,53 +62,27 @@ A task repeats this cycle as many times as its outcome needs.
 
 **Goal:** [One sentence describing what this builds]
 
-**Architecture:** [2-3 sentences about approach, naming the outcomes the
-work delivers. This paragraph is the authority on what one task is: one
-task per outcome named here.]
+**Architecture:** [2-3 sentences about approach, naming the outcomes the work delivers. This paragraph is the authority on what one task is: one task per outcome named here.]
 
 **Tech Stack:** [Key technologies/libraries]
 
-**Spec:** [path to the spec/design doc this plan implements — the plan
-argues from the spec, so the spec travels with it; executors read both]
+**Spec:** [path to the spec/design doc this plan implements — the plan argues from the spec, so the spec travels with it; executors read both]
 
 ## Global Constraints
 
-[The spec's project-wide requirements — version floors, dependency limits,
-naming and copy rules, platform requirements — one line each, with exact
-values copied verbatim from the spec. Every task's requirements implicitly
-include this section.]
+[The spec's project-wide requirements — version floors, dependency limits, naming and copy rules, platform requirements — one line each, with exact values copied verbatim from the spec. Every task's requirements implicitly include this section.]
 
 ## Invariants
 
-[Rules that must hold in code no task was asked to touch, one per line:
-the rule, the kinds of code path it governs, and at least one search
-anchor — an existing symbol, pattern or file a grep finds, or the name of
-the thing this plan creates. Take them from the spec's cross-cutting rules
-("a withheld restriction is invisible to its author", "a hidden item
-answers exactly like a missing one") and from the codebase's conventions
-you found exploring or the project's CLAUDE.md states ("links are built
-only through FrontendUrls"). Reviewers search the whole codebase for every
-path each line governs; an unanchored line is one they cannot search.
-Write `None` when the work has no cross-cutting rule; never omit the
-section.]
+[Rules that must hold in code no task was asked to touch, one per line: the rule, the kinds of code path it governs, and at least one search anchor — an existing symbol, pattern or file a grep finds, or the name of the thing this plan creates. Take them from the spec's cross-cutting rules ("a withheld restriction is invisible to its author", "a hidden item answers exactly like a missing one") and from the codebase's conventions you found exploring or the project's CLAUDE.md states ("links are built only through FrontendUrls"). Reviewers search the whole codebase for every path each line governs; an unanchored line is one they cannot search. Write `None` when the work has no cross-cutting rule; never omit the section.]
 
 ## Review Focus
 
-[The five input classes or failure modes the spec implies but no task's
-tests exercise that are most likely to bite a person using this software
-— one line each, naming the input or condition and the behavior a
-reasonable person would expect, most likely first. The spec is a vision
-document: it says what the software must do, not everything it will
-meet, and its silence on an input is not permission for that input to
-break the program. Write the list here, once, with the spec in front of
-you. Then, for each line, add the test that pins it to the task that
-owns the code, in that task's own step style.]
+[The five input classes or failure modes the spec implies but no task's tests exercise that are most likely to bite a person using this software — one line each, naming the input or condition and the behavior a reasonable person would expect, most likely first. The spec is a vision document: it says what the software must do, not everything it will meet, and its silence on an input is not permission for that input to break the program. Write the list here, once, with the spec in front of you. Then, for each line, add the test that pins it to the task that owns the code, in that task's own step style.]
 
 ## Left to the Builder
 
-[Every decision the plan leaves open, one line each, with the options and
-what should decide between them. The executor rules on each and logs the
-ruling; nothing here is a question for the user.]
+[Every decision the plan leaves open, one line each, with the options and what should decide between them. The executor rules on each and logs the ruling; nothing here is a question for the user.]
 
 ---
 ```
@@ -138,9 +101,7 @@ ruling; nothing here is a question for the user.]
 
 **Interfaces:**
 - Consumes: [what this task uses from earlier tasks — exact signatures]
-- Produces: [what later tasks rely on — exact function names, parameter
-  and return types. A task's implementer sees only their own task; this
-  block is how they learn the names and types neighboring tasks use.]
+- Produces: [what later tasks rely on — exact function names, parameter and return types. A task's implementer sees only their own task; this block is how they learn the names and types neighboring tasks use.]
 
 - [ ] **Step 1: Write the failing test**
 
@@ -152,19 +113,15 @@ def test_specific_behavior():
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `pytest tests/path/test.py::test_name -v`
-Expected: FAIL with "function not defined"
+Run: `pytest tests/path/test.py::test_name -v` Expected: FAIL with "function not defined"
 
 - [ ] **Step 3: Implement `function(input: InputType) -> ResultType` in `exact/path/to/file.py`**
 
-One line on the approach when the signature and the test leave a choice
-(which library call, which data structure); a code block only for an
-algorithm they do not determine.
+One line on the approach when the signature and the test leave a choice (which library call, which data structure); a code block only for an algorithm they do not determine.
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `pytest tests/path/test.py::test_name -v`
-Expected: PASS
+Run: `pytest tests/path/test.py::test_name -v` Expected: PASS
 
 - [ ] **Step 5: Commit**
 
@@ -176,26 +133,14 @@ git commit -m "feat: add specific feature"
 
 ## What a Step Contains
 
-A step is done when the implementer can write exactly one reasonable thing
-from it. That is the whole requirement: unambiguous, not complete. Each kind
-of step carries what makes it unambiguous and nothing more:
+A step is done when the implementer can write exactly one reasonable thing from it. That is the whole requirement: unambiguous, not complete. Each kind of step carries what makes it unambiguous and nothing more:
 
-- **A test step:** the test's name and its assertions, as code, with the
-  spec's exact values in them.
-- **A code step:** the exact signature (name, parameters, return type), the
-  file it lives in, and the specific values the spec pins. The implementer
-  writes the body. A body appears only for an algorithm the signature and
-  tests do not determine, or for exact copy the spec fixes.
-- **A verification step:** the command to run and the output that means it
-  passed.
-- **A reference to another task:** that task's Interfaces block says what
-  to use; the plan does not repeat that task's code.
+- **A test step:** the test's name and its assertions, as code, with the spec's exact values in them.
+- **A code step:** the exact signature (name, parameters, return type), the file it lives in, and the specific values the spec pins. The implementer writes the body. A body appears only for an algorithm the signature and tests do not determine, or for exact copy the spec fixes.
+- **A verification step:** the command to run and the output that means it passed.
+- **A reference to another task:** that task's Interfaces block says what to use; the plan does not repeat that task's code.
 
-A plan is the set of decisions the implementer cannot make alone. A plan
-longer than the code it describes has written the code instead. Lines that
-decide nothing ("TBD", "handle edge cases", "add appropriate validation",
-"write tests for the above", a type or function no task defines) are the
-opposite failure, and the self-review catches both.
+A plan is the set of decisions the implementer cannot make alone. A plan longer than the code it describes has written the code instead. Lines that decide nothing ("TBD", "handle edge cases", "add appropriate validation", "write tests for the above", a type or function no task defines) are the opposite failure, and the self-review catches both.
 
 ## Self-Review
 
@@ -217,22 +162,14 @@ If you find issues, fix them inline. No need to re-review — just fix and move 
 
 ## Open Decisions
 
-A plan never schedules a question for the user at execution time. No step
-says "ask the user", "confirm with your human partner" or "check before
-proceeding". Anything still open goes under Left to the Builder, and the
-executor rules on it.
+A plan never schedules a question for the user at execution time. No step says "ask the user", "confirm with your human partner" or "check before proceeding". Anything still open goes under Left to the Builder, and the executor rules on it.
 
 ## Transient Artifacts
 
-The spec and the plan are working documents, never the feature's
-documentation.
+The spec and the plan are working documents, never the feature's documentation.
 
-- Nothing outside `docs/superpowers/` references the spec or the plan: no
-  code comment, README line, docstring or commit message points at them.
-  The plan's own `Spec:` line is inside `docs/superpowers/` and is fine.
-- The final task updates durable documentation (README, `docs/` outside
-  `docs/superpowers/`, docstrings) when the feature needs it. When it does
-  not, the plan says so: "No durable docs change."
+- Nothing outside `docs/superpowers/` references the spec or the plan: no code comment, README line, docstring or commit message points at them. The plan's own `Spec:` line is inside `docs/superpowers/` and is fine.
+- The final task updates durable documentation (README, `docs/` outside `docs/superpowers/`, docstrings) when the feature needs it. When it does not, the plan says so: "No durable docs change."
 
 ## Ending
 
@@ -247,15 +184,8 @@ or
 
 **"Plan committed to `docs/superpowers/plans/<filename>.md`. Recommend `/compact`, then invoke `superpowers-ross:executing-plans` — <one sentence why>."**
 
-followed by the plan's invariants, one line each under "Invariants
-reviewers will check across the codebase:" (or "Invariants: none"), so
-your human partner can correct the list before execution starts.
+followed by the plan's invariants, one line each under "Invariants reviewers will check across the codebase:" (or "Invariants: none"), so your human partner can correct the list before execution starts.
 
-Recommend exactly one. Native (`superpowers-ross:executing-plans`) fits a
-few tightly coupled tasks where a shipped mistake is cheap and per-task
-review adds little. Otherwise recommend subagent-driven development. The
-sentence why comes from the plan: how many tasks there are, how much they
-depend on each other's interfaces, what a shipped mistake would cost.
+Recommend exactly one. Native (`superpowers-ross:executing-plans`) fits a few tightly coupled tasks where a shipped mistake is cheap and per-task review adds little. Otherwise recommend subagent-driven development. The sentence why comes from the plan: how many tasks there are, how much they depend on each other's interfaces, what a shipped mistake would cost.
 
-No "please review the plan", no menu of options, no question. The message
-is the end of this skill.
+No "please review the plan", no menu of options, no question. The message is the end of this skill.

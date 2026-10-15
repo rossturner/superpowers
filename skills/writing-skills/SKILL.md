@@ -381,8 +381,7 @@ NO SKILL WITHOUT A FAILING TEST FIRST
 
 This applies to NEW skills AND EDITS to existing skills.
 
-Write skill before testing? Delete it. Start over.
-Edit skill without testing? Same violation.
+Write skill before testing? Delete it. Start over. Edit skill without testing? Same violation.
 
 **No exceptions:**
 - Not for "simple additions"
@@ -595,12 +594,10 @@ Micro-tests verify wording; they do not replace pressure scenarios for disciplin
 ## Anti-Patterns
 
 ### ❌ Narrative Example
-"In session 2025-10-03, we found empty projectDir caused..."
-**Why bad:** Too specific, not reusable
+"In session 2025-10-03, we found empty projectDir caused..." **Why bad:** Too specific, not reusable
 
 ### ❌ Multi-Language Dilution
-example-js.js, example-py.py, example-go.go
-**Why bad:** Mediocre quality, maintenance burden
+example-js.js, example-py.py, example-go.go **Why bad:** Mediocre quality, maintenance burden
 
 ### ❌ Code in Flowcharts
 ```dot
@@ -610,8 +607,7 @@ step2 [label="read file"];
 **Why bad:** Can't copy-paste, hard to read
 
 ### ❌ Generic Labels
-helper1, helper2, step3, pattern4
-**Why bad:** Labels should have semantic meaning
+helper1, helper2, step3, pattern4 **Why bad:** Labels should have semantic meaning
 
 ## STOP: Before Moving to Next Skill
 

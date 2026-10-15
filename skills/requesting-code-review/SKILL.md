@@ -29,17 +29,9 @@ BASE_SHA=$(git rev-parse HEAD~1)  # or the commit before the work began (see bel
 HEAD_SHA=$(git rev-parse HEAD)
 ```
 
-For a review of a whole run, BASE_SHA is the executor's recorded `Base:` —
-line 2 of the plan's ledger (`.superpowers/sdd/<plan>/progress.md`). For an
-ad-hoc review, it is the commit before the work began, as the caller states
-it.
+For a review of a whole run, BASE_SHA is the executor's recorded `Base:` — line 2 of the plan's ledger (`.superpowers/sdd/<plan>/progress.md`). For an ad-hoc review, it is the commit before the work began, as the caller states it.
 
-Package the range as a file for the reviewer before dispatching — the
-reviewer expects one. Run the plugin's
-`skills/subagent-driven-development/scripts/review-package BASE_SHA HEAD_SHA`
-(`bash ../subagent-driven-development/scripts/review-package BASE_SHA HEAD_SHA`
-from this skill's directory); it prints the path it wrote — that is
-DIFF_FILE.
+Package the range as a file for the reviewer before dispatching — the reviewer expects one. Run the plugin's `skills/subagent-driven-development/scripts/review-package BASE_SHA HEAD_SHA` (`bash ../subagent-driven-development/scripts/review-package BASE_SHA HEAD_SHA` from this skill's directory); it prints the path it wrote — that is DIFF_FILE.
 
 **2. Dispatch code reviewer subagent:**
 
