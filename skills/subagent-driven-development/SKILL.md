@@ -5,11 +5,11 @@ description: Use when executing implementation plans in the current session — 
 
 # Subagent-Driven Development
 
-Execute plan by dispatching a fresh implementer subagent per task, a task review (spec compliance + code quality) after each, and a broad whole-branch review at the end.
+Execute plan by dispatching a fresh implementer subagent per task, two task reviewers in parallel after each (spec compliance, code quality), and a broad whole-branch review at the end.
 
 **Why subagents:** You delegate tasks to specialized agents with isolated context. By precisely crafting their instructions and context, you ensure they stay focused and succeed at their task. They should never inherit your session's context or history — you construct exactly what they need. This also preserves your own context for coordination work.
 
-**Core principle:** Fresh subagent per task + task review (spec + quality) + broad final review = high quality, fast iteration
+**Core principle:** Fresh subagent per task + parallel spec and quality review + broad final review that fixes everything left = high quality, fast iteration
 
 **Narration:** between tool calls, narrate at most one short line — the
 ledger and the tool results carry the record.
@@ -41,6 +41,26 @@ A plan broken past guessing still gets a ruling: take the most defensible
 reading. If no reading gives a path that works, abandon the task (the last
 rung of the BLOCKED ladder below). Items the plan leaves to the builder are
 ruled and ledgered the same way.
+
+## The Steps
+
+Your FIRST action on invoking this skill, before reading the plan: write
+this skill's step list into the ledger (see Setup for where). It keeps the
+review and bookkeeping steps from being skipped under load, and it survives
+compaction where your memory of this skill does not. Copy it exactly; do
+not paraphrase or shorten it.
+
+```
+## Steps (subagent-driven-development)
+Step 1. Resolve the workspace and check the ledger. Record Base and this step list.
+Step 2. Read the plan and its spec. Run the pre-flight conflict scan. Make sure an invariants list exists, with a search anchor on every line.
+Step 3. For each task: record BASE; dispatch the implementer; build the review package; run the spec and quality reviewers in parallel, both on the orchestrator's model; fix every Critical, Important and spec failure, and every finding that breaches a spec rule or invariant, then run a scoped re-review (5 rounds at most); log each remaining Minor as deferred; write the completion line.
+Step 4. Run the final whole-branch review on opus with the invariants, the deferred Minors and the parked findings. One fix wave fixes everything it returns plus every deferred Minor and parked finding, then one scoped re-review. Anything left unfixed needs a ruling.
+Step 5. List the rulings I made, then run finishing-a-development-branch.
+```
+
+Before each task and after any compaction, re-read the most recent
+`## Steps` block in the ledger and check where you are against it.
 
 ## When to Use
 
@@ -81,8 +101,9 @@ digraph process {
         "Implementer escalates (NEEDS_CONTEXT / BLOCKED)?" [shape=diamond];
         "Answer from spec, plan and code yourself, or climb the BLOCKED ladder" [shape=box];
         "Abandon: ledger it, amend or abandon dependents" [shape=box];
-        "Generate review package, dispatch task reviewer (./task-reviewer-prompt.md)" [shape=box];
-        "Spec ✅ and quality approved?" [shape=diamond];
+        "Generate review package, dispatch spec + quality reviewers in PARALLEL (orchestrator's model)" [shape=box];
+        "Sort: Critical/Important/❌ + any spec or invariant breach → open list; other Minors → ledger" [shape=box];
+        "Open list empty?" [shape=diamond];
         "Finding conflicts with plan text?" [shape=diamond];
         "Rule on the conflict, ledger the ruling" [shape=box];
         "Fix round R of 5: R≤3 resume implementer; R≥4 fresh implementer, more capable model" [shape=box];
@@ -96,24 +117,25 @@ digraph process {
         "Append completion to ledger, mark todo complete" [shape=box];
     }
 
-    "Setup: ledger check (Base: on creation), read plan, pre-flight review" [shape=box];
+    "Setup: ledger check (Base: + Steps on creation), read plan + spec, invariants, pre-flight review" [shape=box];
     "More tasks remain?" [shape=diamond];
-    "Dispatch final code reviewer (../requesting-code-review/code-reviewer.md)" [shape=box];
-    "Final findings? ONE fix dispatch, one scoped re-review, adjudicate residuals" [shape=box];
+    "Dispatch final code reviewer (../requesting-code-review/code-reviewer.md) with invariants, deferred Minors, parked findings" [shape=box];
+    "ONE fix dispatch: all final findings + every deferred Minor and parked finding; one scoped re-review; rule on residuals" [shape=box];
     "Ledger the final review; final message: Rulings I made + plan path" [shape=box];
     "Use superpowers-ross:finishing-a-development-branch" [shape=box style=filled fillcolor=lightgreen];
 
-    "Setup: ledger check (Base: on creation), read plan, pre-flight review" -> "Dispatch implementer subagent (./implementer-prompt.md)";
+    "Setup: ledger check (Base: + Steps on creation), read plan + spec, invariants, pre-flight review" -> "Dispatch implementer subagent (./implementer-prompt.md)";
     "Dispatch implementer subagent (./implementer-prompt.md)" -> "Implementer implements, tests, commits, self-reviews, records decisions";
     "Implementer implements, tests, commits, self-reviews, records decisions" -> "Implementer escalates (NEEDS_CONTEXT / BLOCKED)?";
     "Implementer escalates (NEEDS_CONTEXT / BLOCKED)?" -> "Answer from spec, plan and code yourself, or climb the BLOCKED ladder" [label="yes"];
     "Answer from spec, plan and code yourself, or climb the BLOCKED ladder" -> "Implementer implements, tests, commits, self-reviews, records decisions" [label="re-dispatch"];
     "Answer from spec, plan and code yourself, or climb the BLOCKED ladder" -> "Abandon: ledger it, amend or abandon dependents" [label="ladder exhausted"];
     "Abandon: ledger it, amend or abandon dependents" -> "More tasks remain?";
-    "Implementer escalates (NEEDS_CONTEXT / BLOCKED)?" -> "Generate review package, dispatch task reviewer (./task-reviewer-prompt.md)" [label="no"];
-    "Generate review package, dispatch task reviewer (./task-reviewer-prompt.md)" -> "Spec ✅ and quality approved?";
-    "Spec ✅ and quality approved?" -> "Append completion to ledger, mark todo complete" [label="yes"];
-    "Spec ✅ and quality approved?" -> "Finding conflicts with plan text?" [label="no"];
+    "Implementer escalates (NEEDS_CONTEXT / BLOCKED)?" -> "Generate review package, dispatch spec + quality reviewers in PARALLEL (orchestrator's model)" [label="no"];
+    "Generate review package, dispatch spec + quality reviewers in PARALLEL (orchestrator's model)" -> "Sort: Critical/Important/❌ + any spec or invariant breach → open list; other Minors → ledger";
+    "Sort: Critical/Important/❌ + any spec or invariant breach → open list; other Minors → ledger" -> "Open list empty?";
+    "Open list empty?" -> "Append completion to ledger, mark todo complete" [label="yes"];
+    "Open list empty?" -> "Finding conflicts with plan text?" [label="no"];
     "Finding conflicts with plan text?" -> "Rule on the conflict, ledger the ruling" [label="yes"];
     "Rule on the conflict, ledger the ruling" -> "Fix round R of 5: R≤3 resume implementer; R≥4 fresh implementer, more capable model";
     "Finding conflicts with plan text?" -> "Fix round R of 5: R≤3 resume implementer; R≥4 fresh implementer, more capable model" [label="no"];
@@ -130,9 +152,9 @@ digraph process {
     "Park findings in ledger with rulings" -> "Append completion to ledger, mark todo complete";
     "Append completion to ledger, mark todo complete" -> "More tasks remain?";
     "More tasks remain?" -> "Dispatch implementer subagent (./implementer-prompt.md)" [label="yes"];
-    "More tasks remain?" -> "Dispatch final code reviewer (../requesting-code-review/code-reviewer.md)" [label="no"];
-    "Dispatch final code reviewer (../requesting-code-review/code-reviewer.md)" -> "Final findings? ONE fix dispatch, one scoped re-review, adjudicate residuals";
-    "Final findings? ONE fix dispatch, one scoped re-review, adjudicate residuals" -> "Ledger the final review; final message: Rulings I made + plan path";
+    "More tasks remain?" -> "Dispatch final code reviewer (../requesting-code-review/code-reviewer.md) with invariants, deferred Minors, parked findings" [label="no"];
+    "Dispatch final code reviewer (../requesting-code-review/code-reviewer.md) with invariants, deferred Minors, parked findings" -> "ONE fix dispatch: all final findings + every deferred Minor and parked finding; one scoped re-review; rule on residuals";
+    "ONE fix dispatch: all final findings + every deferred Minor and parked finding; one scoped re-review; rule on residuals" -> "Ledger the final review; final message: Rulings I made + plan path";
     "Ledger the final review; final message: Rulings I made + plan path" -> "Use superpowers-ross:finishing-a-development-branch";
 }
 ```
@@ -168,6 +190,13 @@ a ledger file, not only in todos.
   `Base:` once, when you create the ledger, before any task is dispatched;
   never rewrite it on resume. The final review and
   superpowers-ross:finishing-a-development-branch both read it.
+- Straight after `Base:`, append the `## Steps (subagent-driven-development)`
+  block from The Steps above. The first two lines stay the identity and
+  `Base:` — finishing and resume read them by position. On resume, find the
+  most recent `## Steps` block: if it is another executor's (the plan
+  changed executors) or there is none (a ledger from before step lists),
+  append this skill's block before anything else. The ledger stays
+  append-only.
 - The ledger is your recovery map: the commits it names exist in git even
   when your context no longer remembers creating them. After compaction,
   trust the ledger and `git log` over your own recollection.
@@ -202,6 +231,29 @@ plan is its argument — record the ruling beside its row, and dispatch
 Task 1. The review loop remains the net for conflicts that only emerge from
 implementation.
 
+
+### Invariants
+
+An invariant is a rule that must hold in code no task was asked to touch —
+"a withheld restriction is invisible to its author", "links are built only
+through `FrontendUrls`". Task briefs list the places the plan's author
+thought of; invariants are how a reviewer finds the places nobody listed.
+
+- The plan's `## Invariants` section is the list. Each line names the rule,
+  the kinds of code path it governs, and at least one search anchor — a
+  symbol, pattern or file a grep finds. During the pre-flight scan, check
+  every line has an anchor; where one is missing, find one in the codebase,
+  add it to `<workspace>/invariants.md` beside a copy of the list, and use
+  that file from then on.
+- A plan with no Invariants section (an older plan): write the list from
+  the spec and the codebase's conventions (including the project's
+  CLAUDE.md) into `<workspace>/invariants.md`, ledger
+  `Setup: invariants written by the controller (<count>)`, and print the
+  list to your human partner in your next message, one line each. Do not
+  wait for a reply. With no reachable spec, write it from the plan alone.
+- `None` in the plan means there is nothing to search; the spec reviewer
+  still checks the diff against the spec.
+
 ## Model Selection
 
 **Always pass `model` explicitly when dispatching a subagent** — `haiku`,
@@ -213,18 +265,21 @@ many files the task touches or how large it is. A rename swept across twenty
 files leaves nothing to decide; a one-function change to a lock protocol
 leaves a great deal.
 
-**Implementer and task reviewer — the same rule:**
+**Implementer:**
 - `sonnet` by default.
 - `haiku` when the steps leave essentially nothing to decide: pinned
   signatures with pinned tests and obvious bodies, config or rename sweeps,
   batched same-shape edits.
 - `opus` for a design-heavy task, or after a `sonnet` implementer returns
   BLOCKED.
-- The task reviewer is at least `sonnet` when its review package exceeds
-  3,000 lines (review-package prints the count, and line 1 of the package
-  states it).
 
-**Scoped re-reviews:** `haiku` or `sonnet`, scaled to the fix diff.
+**Spec and quality reviewers:** the orchestrator's own model — `opus` when
+this session runs on Opus, `sonnet` when it runs on Sonnet — for both, on
+every task, whatever tier the implementer got. Pass it explicitly.
+
+**Scoped re-reviews:** the orchestrator's own model when the round carried a
+spec or invariant finding (the re-review re-runs the invariant search);
+otherwise `haiku` or `sonnet`, scaled to the fix diff.
 
 **Fix-loop escalation (rounds 4-5):** at least one tier above the
 implementer that got stuck.
@@ -310,7 +365,7 @@ Template: [implementer-prompt.md](implementer-prompt.md)
 
 Implementer subagents report one of four statuses. Handle each appropriately:
 
-**DONE:** Generate the review package (`bash scripts/review-package PLAN_FILE BASE HEAD`, from this skill's directory — it prints the unique file path it wrote and its line count; BASE is the commit you recorded before dispatching the implementer — never `HEAD~1`, which silently drops all but the last commit of a multi-commit task), then dispatch the task reviewer with the printed path.
+**DONE:** Generate the review package (`bash scripts/review-package PLAN_FILE BASE HEAD`, from this skill's directory — it prints the unique file path it wrote and its line count; BASE is the commit you recorded before dispatching the implementer — never `HEAD~1`, which silently drops all but the last commit of a multi-commit task), then dispatch both task reviewers with the printed path.
 
 Every report carries a Decisions section: the calls the implementer made
 where the brief left them open. They are reviewed with the rest of the
@@ -337,42 +392,59 @@ question to your human partner: the run does not wait on a human. A
 question none of the three answers gets a ruling, ledgered and carried in
 the dispatch.
 
-### 3. Review the task
+### 3. Review the task — two reviewers, in parallel
 
 Per-task reviews are task-scoped gates. The broad review happens once, at the
-final whole-branch review. Never skip the task review, and never accept a
-report missing either verdict — spec compliance AND task quality are both
-required. Implementer self-review never replaces the task review; both are
-needed.
+final whole-branch review. Never skip either task reviewer. Implementer
+self-review never replaces the task review; both are needed.
 
-- Hand the reviewer its diff as a file: run this skill's
+Dispatch BOTH reviewers in one message — they are read-only, so parallel
+dispatch is safe, and neither waits on the other:
+
+- **Spec reviewer** ([spec-reviewer-prompt.md](spec-reviewer-prompt.md)) —
+  owns the ✅/❌/⚠️ Spec Compliance verdict. The spec is its authority over
+  the brief, and it searches the codebase, including unchanged code, for
+  every path the invariants this task touches govern.
+- **Quality reviewer** ([code-quality-reviewer-prompt.md](code-quality-reviewer-prompt.md))
+  — owns the Task quality verdict.
+
+Never sort findings until both reports are in, and never accept a spec
+report without per-invariant search evidence (search terms, hit count,
+files read) for every invariant you named — re-dispatch it once, as with a
+missing read-through line.
+
+- Hand the reviewers their diff as a file: run this skill's
   `bash scripts/review-package PLAN_FILE BASE HEAD` and pass the reviewer the file path
   it prints (or, without bash: `git log --oneline`, `git diff --stat`,
   and `git diff -U10` for the range, redirected to one uniquely named
   file, with `# Review package: BASE..HEAD (<L> lines)` as its first
-  line). The output never enters your own context, and the reviewer reads
+  line). Both reviewers get the same path. The output never enters your own context, and each reviewer reads
   the commit list, stat summary, and full diff with context from one file,
   in ~1,000-line chunks. Use the BASE you recorded before dispatching the implementer —
   never `HEAD~1`, which silently truncates multi-commit tasks. Never
-  dispatch a task reviewer without a diff file.
-- **Reviewer inputs:** the task reviewer gets three paths — the same brief
-  file, the report file, and the review package — plus the global
-  constraints that bind the task.
+  dispatch a reviewer without a diff file.
+- **Reviewer inputs:** both reviewers get the brief file, the report file,
+  the review package, and the global constraints that bind the task. The
+  spec reviewer also gets the spec path, the invariants list verbatim, and
+  the names of the invariants whose governed paths this task's outcome
+  touches. Name them generously: an invariant you leave off is one the
+  reviewer may not search.
 - **Read-through check:** every reviewer report — task review, re-review,
   final review — states "read through line L". A report without that
   statement, or with an L short of the package's line count, is
   re-dispatched once. If the second report also lacks it, rule on what the
   review covered (accept it, or treat the unread part as unreviewed) and
   ledger the ruling.
-- The global-constraints block you hand the reviewer is its attention
+- The global-constraints block you hand the reviewers is their attention
   lens. Copy the binding requirements verbatim from the plan's Global
   Constraints section or the spec: exact values, exact formats, and the
   stated relationships between components ("same layout as X", "matches
-  Y"). The reviewer's template already carries the process rules (YAGNI,
+  Y"). The reviewer templates already carry the process rules (YAGNI,
   test hygiene, review method) — the constraints block is for what THIS
   project's spec demands.
 - Do not add open-ended directives like "check all uses" or "run race tests
-  if useful" without a concrete, task-specific reason
+  if useful" without a concrete, task-specific reason. The invariants are
+  that reason, written down: the spec reviewer's search is scoped to them.
 - Do not ask a reviewer to re-run tests the implementer already ran on the
   same code — the implementer's report carries the test evidence
 - Do not pre-judge findings for the reviewer — never instruct a reviewer to
@@ -381,35 +453,50 @@ needed.
   loop. If the prompt you are writing contains "do not flag," "don't treat X
   as a defect," "at most Minor," or "the plan chose" — stop: you are
   pre-judging, usually to spare yourself a review loop.
-The task reviewer may report "⚠️ Cannot verify from diff" items — requirements
+The spec reviewer may report "⚠️ Cannot verify from diff" items — requirements
 that live in unchanged code or span tasks. These do not block the rest of the
 review, but you must resolve each one yourself before marking the task
 complete: you hold the plan and cross-task context the reviewer
 lacks. If you confirm an item is a real gap, treat it as a failed spec
 review — it enters the fix loop with the other findings.
 
-Template: [task-reviewer-prompt.md](task-reviewer-prompt.md)
+Templates: [spec-reviewer-prompt.md](spec-reviewer-prompt.md),
+[code-quality-reviewer-prompt.md](code-quality-reviewer-prompt.md)
 
 ### 4. The fix loop
 
-The loop triggers when the review reports spec ❌, any Critical or Important
-finding, or a ⚠️ item you confirmed as a real gap.
+Once both reports are in, sort every finding into ONE open list:
 
-Before the loop starts, two routes leave it immediately:
+- every spec ❌ (including invariant breaches, whether this task caused
+  them or the code predates the branch), every Critical and Important from
+  either reviewer, and every ⚠️ item you confirmed as a real gap;
+- any finding of any grade — a quality Minor included — that breaches a
+  spec rule or an invariant. A reviewer that graded a spec breach Minor
+  graded its size, not its effect. Ledger
+  `Task <N>: Ruling: regraded — <finding> — breaches <rule>`. Re-grading
+  only ever moves a finding up.
 
-- Record Minor findings in the progress ledger as you go
-  (`Task <N>: minor (deferred): <one-liner>`), and point the final
-  whole-branch review at that list so it can triage which must be fixed
-  before finishing. A roll-up nobody reads is a silent discard. Minor findings
-  never enter the loop.
+The loop triggers when the open list is not empty. Before it starts, three
+routes leave it:
+
+- **A breach in a path the plan gives to a later task** goes to that task:
+  ledger `Task <N>: Ruling: deferred to Task <M> — <finding> — <why that
+  task owns it>` and carry the finding in Task M's dispatch. Only an
+  explicit plan assignment qualifies; "a later task is near there" does
+  not.
+- **Remaining Minors** are deferred, not dropped: ledger each as
+  `Task <N>: minor (deferred): <one-liner>`. The final fix wave fixes every
+  one of them (see Final Review). Deferred means "fixed in the final wave",
+  never "maybe later" — nothing after the final wave will pick them up.
 - A finding labeled plan-mandated — or any finding that conflicts with
   what the plan's text requires — is yours to rule on: weigh the finding
   against the plan text, decide with the spec as the binding authority, and
   ledger the ruling before you act on it. Do not dismiss the finding because
   the plan mandates it, and do not dispatch a fix that contradicts the plan
   without a recorded ruling.
-Everything else enters the loop. A fix round is one fix dispatch plus one
-scoped re-review. Five rounds maximum per task:
+Everything else enters the loop. A fix round is one fix dispatch carrying
+the whole open list, from both reviewers, plus one scoped re-review. Five
+rounds maximum per task:
 
 **Rounds 1-3 — resume the original implementer.** Send it the open findings
 verbatim. Its context is intact: it knows the task, the code, and its own
@@ -426,7 +513,7 @@ own problem — fresh eyes and a capability bump in one move.
 
 **Every round, either way:** the implementer fixes, re-runs the tests
 covering the amended code, appends its fix report to the same report file,
-and returns the short contract. Before re-dispatching the reviewer, confirm
+and returns the short contract. Before dispatching the re-review, confirm
 the fix report contains the covering tests, the command run, and the
 output; dispatch the re-review once all three are present. Name the
 covering test files in the fix message — a one-line fix does not need the
@@ -434,10 +521,13 @@ whole suite.
 
 **The re-review is scoped.** Run `bash scripts/review-package PLAN_FILE FIX_BASE HEAD`
 where FIX_BASE is the head the previous review saw, and dispatch
-[re-review-prompt.md](re-review-prompt.md) with the findings list, the
-brief, the report file, and the printed diff path. The re-reviewer verdicts
-each finding ADDRESSED or NOT ADDRESSED and flags new breakage in the fix
-diff only. New Critical/Important breakage in the fix diff joins the open
+[re-review-prompt.md](re-review-prompt.md) with the open list, the
+brief, the report file, and the printed diff path. When the round carried a
+spec or invariant finding, also pass each breached invariant: the
+re-reviewer re-runs its search over the codebase, not only the fix diff, and
+runs on the orchestrator's model (see Model Selection). The re-reviewer
+verdicts each finding ADDRESSED or NOT ADDRESSED and flags new breakage in
+the fix diff. New Critical/Important breakage in the fix diff joins the open
 findings list. Out-of-scope observations go to the ledger as deferred
 minors — they never extend the loop.
 
@@ -497,21 +587,28 @@ printed path in the final review dispatch, so the final reviewer reads
 one file instead of re-deriving the branch diff with git commands. Dispatch
 on `opus` (see Model Selection), using
 superpowers-ross:requesting-code-review's
-[code-reviewer.md](../requesting-code-review/code-reviewer.md). Point it at
-the ledger's deferred-minor and parked lines so it can triage which must be
-fixed before finishing.
+[code-reviewer.md](../requesting-code-review/code-reviewer.md). Give it the
+invariants list verbatim — it checks each across the whole codebase and
+reports its search evidence — and the ledger's `minor (deferred)` and
+`parked` lines as work to be fixed, not triaged: "these get fixed; flag any
+you believe are wrong, with why".
 
-If the final whole-branch review returns findings, dispatch ONE fix subagent
-with the complete findings list — not one fixer per finding.
+Dispatch ONE fix subagent with everything left: the final reviewer's
+findings at every grade, Minor included, plus every deferred Minor and
+every parked finding it did not show to be wrong — not one fixer per
+finding.
 Per-finding fixers each rebuild context and re-run suites; a real
 session's final-review fix wave cost more than all its tasks combined.
 Then run exactly one scoped re-review of the fix wave
 (`bash scripts/review-package PLAN_FILE FIX_BASE HEAD` over the fix range,
 [re-review-prompt.md](re-review-prompt.md)).
-Adjudicate any residual findings as in the task loop's breaker: park with
-rulings, or rule on the load-bearing ones and ledger what you decided.
-There is no second fix wave — residual load-bearing findings go at the top
-of Rulings I made.
+There is no second fix wave. Every item the wave did not fix — the
+re-review says NOT ADDRESSED, or you excluded it before dispatch — gets a
+ruling:
+`Final: Ruling: not fixed — <finding> — <wrong: why | not a code change | fix failed: what was tried> — <cost if wrong>`.
+"Not worth it", "polish" and "can wait" are not reasons: nothing after this
+wave will pick the item up. Residual load-bearing findings go at the top of
+Rulings I made.
 
 Then ledger the outcome: `Final review: fixes (commits <a7>..<b7>)` over
 the fix wave's range, or `Final review: clean` when there was nothing to
@@ -552,6 +649,12 @@ Use superpowers-ross:finishing-a-development-branch.
 | "Ledger bookkeeping is overhead" | The ledger is what survives compaction. Controllers without one have re-dispatched entire completed task sequences. |
 | "My human partner would know the answer, I'll just ask" | The run does not wait on a human. Answer from the spec, plan and code; where they are silent, rule and ledger it. |
 | "The implementer spawned its own reviewer — free extra assurance" | It's a duplicate seat reviewing the same diff; the task review is the gate. A worker-spawned reviewer is a defect to flag, not rigor. |
+| "It's only Minor, it can wait" | It waits for the final wave, and the final wave fixes it. Nothing after that wave picks it up — "later" is never. |
+| "The reviewer graded this spec breach Minor" | Grade is size; a spec or invariant breach is a failure at any size. Re-grade it into the open list. |
+| "That breach predates this branch, not my task" | An invariant breach the search finds is this task's ❌. The run leaves the rule holding. |
+| "I know the steps, no need to write them to the ledger" | The step list is for after compaction, when you don't. Write it first, re-read it before each task. |
+| "One reviewer can cover spec and quality" | Two focused reads find what one split read misses. Dispatch both, in parallel. |
+| "The reviewer said it checked the invariant" | No search terms, hit count and files read means no check. Send it back. |
 
 ## Example Workflow
 
@@ -560,7 +663,8 @@ You: I'm using Subagent-Driven Development to execute this plan.
 
 [Read plan file once: docs/superpowers/plans/feature-plan.md]
 [Resolve workspace: bash scripts/sdd-workspace docs/superpowers/plans/feature-plan.md — no ledger inside, fresh start]
-[Create ledger: plan line, then Base: <git rev-parse HEAD>]
+[Create ledger: plan line, Base: <git rev-parse HEAD>, then the ## Steps block copied verbatim]
+[Plan's Invariants: 2 lines, both anchored — "hooks only under ~/.config/superpowers/hooks (anchor: HOOK_DIR)", ...]
 [Create todos for all tasks]
 
 Task 1: Hook installation script
@@ -579,9 +683,12 @@ Implementer: [Later]
   - Decisions: existing hook file is backed up, not overwritten (brief silent)
   - Committed
 
-[Run review-package PLAN_FILE BASE HEAD; dispatch task reviewer with the printed path]
-Task reviewer: Read through line 212 of 212. Spec ✅ - all requirements met, nothing extra.
-  Strengths: Good test coverage, clean. Issues: None. Task quality: Approved.
+[Run review-package PLAN_FILE BASE HEAD; dispatch spec + quality reviewers in parallel, both on the session's model]
+Spec reviewer: Read through line 212 of 212. Spec ✅. Invariants: hook dir —
+  searched HOOK_DIR, "hooks/" (6 hits; files read: install.js, paths.js) ✅ holds.
+Quality reviewer: Read through line 212 of 212. Strengths: good coverage.
+  Minor: install.js:30 error message omits the path. Task quality: Approved.
+[Ledger: Task 1: minor (deferred): install.js:30 error message omits the path]
 
 [Ledger: Task 1: complete (commits a1b2c3d..d4e5f6a, review clean)]
 
@@ -594,12 +701,12 @@ Implementer: [No questions]
   - 8/8 tests passing
   - Committed a9b8c7d
 
-[Run review-package PLAN_FILE BASE HEAD; dispatch task reviewer with the printed path]
-Task reviewer: Spec ❌:
+[Run review-package PLAN_FILE BASE HEAD; dispatch both reviewers in parallel]
+Spec reviewer: Spec ❌:
   - Missing: Progress reporting (spec says "report every 100 items")
-  Issues (Important): Magic number (100)
+Quality reviewer: Issues (Important): Magic number (100)
 
-[Fix round 1: resume the implementer with both findings]
+[Fix round 1: resume the implementer with the open list — both findings]
 Implementer: Added progress reporting, extracted PROGRESS_INTERVAL constant.
   Re-ran test/recovery.test.js — 10/10 passing. Fix report appended.
 
@@ -615,11 +722,12 @@ Re-reviewer: Read through line 96 of 96.
 ...
 
 [After all tasks]
-[Run review-package PLAN_FILE BASE HEAD, BASE from the ledger's Base: line; dispatch final code-reviewer on opus]
+[Run review-package PLAN_FILE BASE HEAD, BASE from the ledger's Base: line; dispatch final code-reviewer on opus with the invariants and the deferred Minors]
 Final reviewer: Read through line 1843 of 1843. All requirements met.
-  Deferred minors triaged: none block merge.
+  Invariants hold (search evidence given). Deferred Minor install.js:30 — still present.
 
-[Ledger: Final review: clean]
+[ONE fix dispatch: the deferred Minor; scoped re-review: ADDRESSED]
+[Ledger: Final review: fixes (commits c9d0e1f..f2a3b4c)]
 [Final message: Rulings I made, plan path — workspace left for finishing]
 
 Done! Using superpowers-ross:finishing-a-development-branch.

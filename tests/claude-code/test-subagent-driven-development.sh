@@ -39,11 +39,10 @@ echo ""
 # Test 2: Verify skill describes correct workflow order
 echo "Test 2: Workflow ordering..."
 
-output=$(run_claude "In the subagent-driven-development skill, what comes first: spec compliance review or code quality review? Answer using exactly this structure:
-First: <review type>
-Second: <review type>" "$CLAUDE_PROMPT_TIMEOUT")
+output=$(run_claude "In the subagent-driven-development skill, are the spec compliance review and the code quality review run one after the other or in parallel? Answer using exactly this structure:
+Order: <sequential or parallel>" "$CLAUDE_PROMPT_TIMEOUT")
 
-if assert_order "$output" "First:.*spec.*compliance" "Second:.*code.*quality" "Spec compliance before code quality"; then
+if assert_contains "$output" "Order:.*parallel" "Spec and quality reviews run in parallel"; then
     : # pass
 else
     exit 1

@@ -1,24 +1,26 @@
-# Task Reviewer Prompt Template
+# Code Quality Reviewer Prompt Template
 
-Use this template when dispatching a task reviewer subagent. The reviewer
-reads the task's diff once and returns two verdicts: spec compliance and
-code quality.
+Use this template when dispatching a code quality reviewer subagent. Each
+task gets two reviewers dispatched **in parallel**: this one and
+[spec-reviewer-prompt.md](spec-reviewer-prompt.md). Both are read-only, so
+concurrent dispatch is safe. Do not wait for the spec review first.
 
-**Purpose:** Verify one task's implementation matches its requirements (nothing
-more, nothing less) and is well-built (clean, tested, maintainable)
+**Purpose:** Verify the implementation is well-built (clean, tested,
+maintainable).
 
 ```
 Subagent (general-purpose):
-  description: "Review Task N (spec + quality)"
-  model: [MODEL — REQUIRED: choose per SKILL.md Model Selection; an omitted
-         model silently inherits the session's most expensive one]
+  description: "Quality review Task N"
+  model: [MODEL — REQUIRED: the orchestrator's own model per SKILL.md Model
+         Selection; an omitted model silently inherits the session's]
   prompt: |
-    You are reviewing one task's implementation: first whether it matches its
-    requirements, then whether it is well-built. This is a task-scoped gate,
-    not a merge review — a broad whole-branch review happens separately after
-    all tasks are complete.
+    You are reviewing whether one task's implementation is well-built. This
+    is a task-scoped gate, not a merge review — a broad whole-branch review
+    happens separately after all tasks are complete. Another reviewer is
+    checking spec compliance on the same diff in parallel; whether every
+    requirement was met is not your job. Judge how what was built was built.
 
-    ## What Was Requested
+    ## The Task
 
     Read the task brief: [BRIEF_FILE]
 
@@ -95,31 +97,11 @@ Subagent (general-purpose):
     report or its test evidence looks truncated, or you cannot locate the
     results it claims, re-read the file at its stated path — and if it is
     genuinely missing or garbled, report that as a gap for the controller.
-    Re-running the suite to regenerate what you failed to read is not
-    verification; illegibility of the evidence is not invalidation of it.
 
-    ## Part 1: Spec Compliance
+    A report that says tests were written after the code, or that RED was
+    only a compile failure, is a finding about the tests, not a note.
 
-    Compare the diff against What Was Requested:
-
-    - **Missing:** requirements they skipped, missed, or claimed without
-      implementing
-    - **Extra:** features that weren't requested, over-engineering, unneeded
-      "nice to haves"
-    - **Misunderstood:** right feature built the wrong way, wrong problem
-      solved
-
-    If the brief lists several files each with its own change (a batched
-    dispatch), check the diff against that list file by file: every listed
-    file must have its corresponding hunk. A listed file the diff never
-    touches is a Missing finding, no matter how clean the rest of the
-    batch looks.
-
-    If a requirement cannot be verified from this diff alone (it lives in
-    unchanged code or spans tasks), report it as a ⚠️ item instead of
-    broadening your search.
-
-    ## Part 2: Code Quality
+    ## What to Check
 
     **Code quality:**
     - Clean separation of concerns?
@@ -141,25 +123,19 @@ Subagent (general-purpose):
 
     Your report should point at evidence: file:line references for every
     finding and for any check you would otherwise answer with a bare
-    "yes." A tight report that cites lines gives the controller everything
-    it needs.
-
-    Your final message is the report itself: begin with "Read through line
-    <L> of <L>." and then directly with the spec-compliance verdict. Every line is a verdict, a finding with
-    file:line, or a check you ran — no preamble, no process narration,
-    no closing summary.
+    "yes."
 
     ## Calibration
 
     Categorize issues by actual severity. Not everything is Critical.
     Important means this task cannot be trusted until it is fixed: incorrect
-    or fragile behavior, a missed requirement, or maintainability damage you
-    would block a merge over — verbatim duplication of a logic block,
-    swallowed errors, tests that assert nothing. "Coverage could be broader"
-    and polish suggestions are Minor.
+    or fragile behavior, or maintainability damage you would block a merge
+    over — verbatim duplication of a logic block, swallowed errors, tests
+    that assert nothing. "Coverage could be broader" and polish suggestions
+    are Minor. Minor is not "optional": every Minor is fixed before the
+    branch finishes, so report each one you would want fixed.
     If the plan or brief explicitly mandates something this rubric calls a
-    defect (a test that asserts nothing, verbatim duplication of a logic
-    block), that IS a finding — report it as Important, labeled
+    defect, that IS a finding — report it as Important, labeled
     plan-mandated. The plan's authorship does not grade its own work; the
     controller rules.
     Acknowledge what was done well before listing issues — accurate praise
@@ -167,15 +143,12 @@ Subagent (general-purpose):
 
     ## Output Format
 
+    Your final message is the report itself: begin with "Read through line
+    <L> of <L>." and then directly with Strengths. Every line is a verdict,
+    a finding with file:line, or a check you ran — no preamble, no process
+    narration, no closing summary.
+
     Read through line <L> of <L>.
-
-    ### Spec Compliance
-
-    - ✅ Spec compliant | ❌ Issues found: [what's missing/extra/misunderstood,
-      with file:line references]
-    - ⚠️ Cannot verify from diff: [requirements you could not verify from the
-      diff alone, and what the controller should check — report alongside the
-      ✅/❌ verdict for everything you could verify]
 
     ### Strengths
     [What's well done? Be specific.]
@@ -184,7 +157,7 @@ Subagent (general-purpose):
 
     #### Critical (Must Fix)
     #### Important (Should Fix)
-    #### Minor (Nice to Have)
+    #### Minor (Fixed before finishing)
 
     For each issue: file:line, what's wrong, why it matters, how to fix
     (if not obvious).
@@ -197,21 +170,14 @@ Subagent (general-purpose):
 ```
 
 **Placeholders:**
-- `[MODEL]` — REQUIRED: reviewer model per SKILL.md Model Selection
-- `[BRIEF_FILE]` — REQUIRED: the task brief file (`bash scripts/task-brief PLAN N`
-  prints the path; same file the implementer worked from)
+- `[MODEL]` — REQUIRED: the orchestrator's own model (`opus` or `sonnet`)
+- `[BRIEF_FILE]` — REQUIRED: the task brief file (same file the implementer worked from)
 - `[GLOBAL_CONSTRAINTS]` — the binding requirements copied verbatim from
-  the plan's Global Constraints section or the spec: exact values, formats,
-  and stated relationships between components (not process rules — those
-  are already in this template)
-- `[REPORT_FILE]` — REQUIRED: the file the implementer wrote its detailed
-  report to
+  the plan's Global Constraints section or the spec
+- `[REPORT_FILE]` — REQUIRED: the implementer's report file
 - `[BASE_SHA]` — commit before this task
 - `[HEAD_SHA]` — current commit
-- `[DIFF_FILE]` — REQUIRED: the path the controller wrote the review
-  package to (`bash scripts/review-package PLAN_FILE BASE HEAD` prints the unique
-  path it wrote and its line count; the package never enters the
-  controller's context)
+- `[DIFF_FILE]` — REQUIRED: the path `bash scripts/review-package PLAN_FILE BASE HEAD` printed
 
-**Reviewer returns:** the line it read through, Spec Compliance verdict (✅/❌/⚠️), Strengths, Issues
-(Critical/Important/Minor), Task quality verdict
+**Reviewer returns:** the line it read through, Strengths, Issues
+(Critical/Important/Minor), Task quality verdict.

@@ -89,6 +89,20 @@ naming and copy rules, platform requirements — one line each, with exact
 values copied verbatim from the spec. Every task's requirements implicitly
 include this section.]
 
+## Invariants
+
+[Rules that must hold in code no task was asked to touch, one per line:
+the rule, the kinds of code path it governs, and at least one search
+anchor — an existing symbol, pattern or file a grep finds, or the name of
+the thing this plan creates. Take them from the spec's cross-cutting rules
+("a withheld restriction is invisible to its author", "a hidden item
+answers exactly like a missing one") and from the codebase's conventions
+you found exploring or the project's CLAUDE.md states ("links are built
+only through FrontendUrls"). Reviewers search the whole codebase for every
+path each line governs; an unanchored line is one they cannot search.
+Write `None` when the work has no cross-cutting rule; never omit the
+section.]
+
 ## Review Focus
 
 [The five input classes or failure modes the spec implies but no task's
@@ -195,7 +209,9 @@ After writing the complete plan, look at the spec with fresh eyes and check the 
 
 **4. Review Focus:** For each input class or failure mode the spec implies, is there a task whose tests exercise it? The five uncovered ones most likely to bite a person go in the Review Focus section, and each line there gets its test added to the owning task. An empty section means you checked and found none, not that you skipped the check.
 
-**5. Proportion:** Compare the plan's length to the spec's. A plan several times longer than the spec it implements is a transcript of the program, not a plan. If code blocks are most of the document, replace bodies with signatures, test names and assertions, and check that each step is still unambiguous.
+**5. Invariants:** For each rule the spec states as holding everywhere — and each codebase convention the tasks' code must follow — is there an Invariants line with an anchor a grep would find? A rule only some tasks' briefs mention is the one a reviewer misses in the code no task touches.
+
+**6. Proportion:** Compare the plan's length to the spec's. A plan several times longer than the spec it implements is a transcript of the program, not a plan. If code blocks are most of the document, replace bodies with signatures, test names and assertions, and check that each step is still unambiguous.
 
 If you find issues, fix them inline. No need to re-review — just fix and move on. If you find a spec requirement with no task, add the task.
 
@@ -230,6 +246,10 @@ After saving and self-reviewing the plan:
 or
 
 **"Plan committed to `docs/superpowers/plans/<filename>.md`. Recommend `/compact`, then invoke `superpowers-ross:executing-plans` — <one sentence why>."**
+
+followed by the plan's invariants, one line each under "Invariants
+reviewers will check across the codebase:" (or "Invariants: none"), so
+your human partner can correct the list before execution starts.
 
 Recommend exactly one. Native (`superpowers-ross:executing-plans`) fits a
 few tightly coupled tasks where a shipped mistake is cheap and per-task

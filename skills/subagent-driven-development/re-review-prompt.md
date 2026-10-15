@@ -61,12 +61,24 @@ Subagent (general-purpose):
 
     ## Scope
 
-    Your scope is the findings list and the fix diff. Verdict every finding.
+    Your scope is the findings list, the fix diff, and the invariant
+    searches below. Verdict every finding.
     Inspect the fix diff for new problems the fix itself introduced. Do NOT
     re-review code the fix did not touch: if you notice an issue entirely
     outside the fix diff, report it under Out-of-Scope Observations — it
     does not block this task and does not extend the loop. A broad
     whole-branch review happens after all tasks are complete.
+
+    ## Invariant Findings
+
+    [INVARIANT_FINDINGS]
+
+    For each invariant named above, the fix diff is not enough: re-run that
+    invariant's search over the codebase — grep and read, starting from its
+    anchors — and confirm no governing path still breaks the rule, including
+    paths the fix moved or added. State the search terms, hit count and
+    files read. A breach the search still finds keeps the finding NOT
+    ADDRESSED. When this section says "None", skip it.
 
     ## Tests
 
@@ -110,11 +122,14 @@ Subagent (general-purpose):
 ```
 
 **Placeholders:**
-- `[MODEL]` — REQUIRED: reviewer model per SKILL.md Model Selection; scoped
-  re-reviews take `haiku` or `sonnet`, scaled to the fix diff
+- `[MODEL]` — REQUIRED: reviewer model per SKILL.md Model Selection; the
+  orchestrator's own model when the round carried a spec or invariant
+  finding, otherwise `haiku` or `sonnet`, scaled to the fix diff
 - `[BRIEF_FILE]` — the task brief file (same file the implementer worked from)
-- `[FINDINGS]` — the Critical/Important findings and spec gaps from the
-  previous review, copied verbatim, one per bullet
+- `[FINDINGS]` — the round's open list from both reviewers, copied
+  verbatim, one per bullet
+- `[INVARIANT_FINDINGS]` — each invariant an open finding breaches, verbatim
+  with its anchors; "None" when the round carried no invariant finding
 - `[REPORT_FILE]` — the implementer's report file (fix reports appended)
 - `[FIX_BASE_SHA]` — the head the previous review saw
 - `[HEAD_SHA]` — current commit

@@ -58,6 +58,27 @@ goes on:
 - **Items the plan leaves to the builder** are ruled and ledgered the same
   way.
 
+## The Steps
+
+Your FIRST action on invoking this skill, before reading the plan: write
+this skill's step list into the ledger (see Setup for where). It keeps the
+final review and its fix pass from being skipped under load, and it
+survives compaction where your memory of this skill does not. Copy it
+exactly; do not paraphrase or shorten it.
+
+```
+## Steps (executing-plans)
+Step 1. Resolve the workspace and check the ledger. Record Base and this step list.
+Step 2. Read the plan and its spec. Run the pre-flight scan. Make sure an invariants list exists, with a search anchor on every line.
+Step 3. For each task: task-start; read the brief; work the steps with TDD, comparing every Expected line; commit; task-done.
+Step 4. Run the final whole-branch review on opus with the invariants.
+Step 5. One fix pass fixes every finding at every grade, Minor included. Anything left unfixed needs a ruling.
+Step 6. List the rulings I made, then run finishing-a-development-branch.
+```
+
+Before each task and after any compaction, re-read the most recent
+`## Steps` block in the ledger and check where you are against it.
+
 ## When to Use
 
 - superpowers-ross:writing-plans recommended this skill: the plan has few
@@ -98,14 +119,14 @@ digraph process {
         "task-done: run tests, ledger the result; mark todo complete" [shape=box];
     }
 
-    "Setup: current branch; workspace + ledger with Base:, read plan + spec, pre-flight scan" [shape=box];
+    "Setup: current branch; workspace + ledger with Base: + Steps, read plan + spec, invariants, pre-flight scan" [shape=box];
     "More tasks remain?" [shape=diamond];
     "Final whole-branch review of Base..HEAD (fresh opus reviewer if you have one)" [shape=box];
-    "Re-grade, then: Critical/Important → ONE fix pass, each fix RED→GREEN + green suite; Minor → ledger" [shape=box];
-    "Final message: Rulings I made, Deferred minors, plan path (workspace kept)" [shape=box];
+    "ONE fix pass over every finding, Minor included: behaviour fixes RED→GREEN, others suite green; unfixed → ruling" [shape=box];
+    "Final message: Rulings I made, plan path (workspace kept)" [shape=box];
     "Use superpowers-ross:finishing-a-development-branch" [shape=box style=filled fillcolor=lightgreen];
 
-    "Setup: current branch; workspace + ledger with Base:, read plan + spec, pre-flight scan" -> "task-start: brief + BASE; read the brief";
+    "Setup: current branch; workspace + ledger with Base: + Steps, read plan + spec, invariants, pre-flight scan" -> "task-start: brief + BASE; read the brief";
     "task-start: brief + BASE; read the brief" -> "Work the steps in order: TDD, run every verification, read every output";
     "Work the steps in order: TDD, run every verification, read every output" -> "Step output matches plan's Expected?";
     "Step output matches plan's Expected?" -> "Plan wrong? Rule → amend once → abandon, ledgered. Code wrong? systematic-debugging" [label="no"];
@@ -117,9 +138,9 @@ digraph process {
     "task-done: run tests, ledger the result; mark todo complete" -> "More tasks remain?";
     "More tasks remain?" -> "task-start: brief + BASE; read the brief" [label="yes"];
     "More tasks remain?" -> "Final whole-branch review of Base..HEAD (fresh opus reviewer if you have one)" [label="no"];
-    "Final whole-branch review of Base..HEAD (fresh opus reviewer if you have one)" -> "Re-grade, then: Critical/Important → ONE fix pass, each fix RED→GREEN + green suite; Minor → ledger";
-    "Re-grade, then: Critical/Important → ONE fix pass, each fix RED→GREEN + green suite; Minor → ledger" -> "Final message: Rulings I made, Deferred minors, plan path (workspace kept)";
-    "Final message: Rulings I made, Deferred minors, plan path (workspace kept)" -> "Use superpowers-ross:finishing-a-development-branch";
+    "Final whole-branch review of Base..HEAD (fresh opus reviewer if you have one)" -> "ONE fix pass over every finding, Minor included: behaviour fixes RED→GREEN, others suite green; unfixed → ruling";
+    "ONE fix pass over every finding, Minor included: behaviour fixes RED→GREEN, others suite green; unfixed → ruling" -> "Final message: Rulings I made, plan path (workspace kept)";
+    "Final message: Rulings I made, plan path (workspace kept)" -> "Use superpowers-ross:finishing-a-development-branch";
 }
 ```
 
@@ -166,6 +187,12 @@ and the new one resumes from the same ledger.
   rewrite it. `task-done` refuses to run against a ledger without it, and
   the final review and superpowers-ross:finishing-a-development-branch both
   cut their range from it.
+- Straight after `Base:`, append the `## Steps (executing-plans)` block
+  from The Steps above. The first two lines stay the identity and `Base:`.
+  On resume, find the most recent `## Steps` block: if it is another
+  executor's (the plan changed executors) or there is none (a ledger from
+  before step lists), append this skill's block before anything else. The
+  ledger stays append-only.
 - `git clean -fdx` will destroy the workspace (it's git-ignored scratch);
   if that happens, recover from `git log`.
 
@@ -189,6 +216,18 @@ line `Pre-flight: no shared interfaces`. Rule on each conflict a row
 surfaces with the spec as the binding authority, record the ruling beside
 its row, and start Task 1. Each task's own text is checked when you read
 its brief, not here.
+
+**Invariants.** The plan's `## Invariants` section lists the rules that
+must hold in code no task was asked to touch; the final reviewer checks
+each across the whole codebase. During the pre-flight scan, check every
+line has a search anchor (a symbol, pattern or file a grep finds); where
+one is missing, find one and write the anchored list to
+`<workspace>/invariants.md`. A plan with no Invariants section gets one
+written from the spec and the codebase's conventions (including the
+project's CLAUDE.md) into `<workspace>/invariants.md`: ledger
+`Setup: invariants written by the executor (<count>)` and print the list
+to your human partner in your next message, one line each, without waiting
+for a reply. `None` in the plan means there is nothing to search.
 
 ## The Task Loop
 
@@ -288,7 +327,9 @@ Its first line gives the package's total line count.
 whole-branch review is a judgment task — using
 superpowers-ross:requesting-code-review's
 [code-reviewer.md](../requesting-code-review/code-reviewer.md), with the
-package path, the plan and spec paths, the plan's Review Focus section
+package path, the plan and spec paths, the invariants list verbatim (it
+checks each across the whole codebase, not only the diff, and reports the
+search terms, hit count and files read), the plan's Review Focus section
 verbatim if it has one (the input classes and failure modes the plan's
 tests do not exercise — the reviewer checks each deliberately), and a
 pointer to the ledger's `Ruling:` lines so it can weigh the calls you
@@ -322,17 +363,19 @@ person using this software gets if it ships, not whether the spec names
 the input that triggers it — a reviewer who set a finding at Minor
 because the spec was silent has graded the spec, not the effect. Then:
 
-- **Critical and Important** enter the fix pass.
-- **Minor** goes to the ledger as `Final: minor (deferred): <one-liner>`
-  and to your final message under "Deferred minors". Minors never enter
-  the fix pass, and never become rulings — a ruling is a decision about a
-  conflict, not a note that you declined a polish suggestion.
+- **Every finding enters the fix pass**, Critical through Minor. A Minor
+  left for later is never picked up: this pass is the last one.
 
-Fix the Critical and Important findings yourself — you are the
-implementer here — in ONE pass. Each fix is verified by TDD, not by a
-second reviewer: write the test that reproduces the finding, watch it
-fail, make it pass, then run the whole suite. Record each in the ledger as
-`Final: fixed <finding> — <test name> RED→GREEN, suite <N>/<N>`. When the
+Fix them yourself — you are the implementer here — in ONE pass:
+
+- **A fix that changes behaviour** is verified by TDD, not by a second
+  reviewer: write the test that reproduces the finding, watch it fail,
+  make it pass, then run the whole suite. Ledger
+  `Final: fixed <finding> — <test name> RED→GREEN, suite <N>/<N>`.
+- **A fix that changes no behaviour** (naming, duplication, structure,
+  docs) has no failing test to write. It is verified by the whole suite
+  staying green. Ledger
+  `Final: fixed <finding> — no behaviour change, suite <N>/<N>`. When the
 pass is over, ledger the wave as `Final review: fixes (commits <a7>..<b7>)`,
 from the HEAD before the first fix to the HEAD after the last — or
 `Final review: clean` when there was nothing to fix. A fix
@@ -341,9 +384,10 @@ green after the pass means the pass is not over. Do not dispatch a
 re-review: it would re-read a diff whose covering tests already answer
 "addressed" and whose suite run already answers "broke nothing".
 
-A finding you decide not to fix is a ruling — `Final: Ruling: <finding> —
-<why the code stands> — <cost if wrong>` — and reaches your human partner
-in the rulings list. There is no second fix pass.
+A finding you do not fix is a ruling —
+`Final: Ruling: not fixed — <finding> — <wrong: why | not a code change | fix failed: what was tried> — <cost if wrong>`
+— and reaches your human partner in the rulings list. "Not worth it",
+"polish" and "can wait" are not reasons. There is no second fix pass.
 
 ## Finish
 
@@ -352,10 +396,9 @@ under "Rulings I made", each with what it costs if wrong. List first, in
 this order: abandoned tasks, "left for you" actions, unverified tasks (with
 the dependents flagged under each), and residual load-bearing findings —
 final-review findings you ruled not to fix. Then every other ruling, in
-the order you made them. Every `minor (deferred)` line goes under
-"Deferred minors". Both lists are exhaustive. Your final message is the
+the order you made them. The list is exhaustive. Your final message is the
 only place the decisions you took on your human partner's behalf — and the
-findings you chose not to act on — reach them. End it with the plan path.
+findings you did not fix — reach them. End it with the plan path.
 
 Do not delete the workspace: superpowers-ross:finishing-a-development-branch
 reads `Base:` and the chained commit ranges from the ledger, and deletes the
@@ -380,7 +423,9 @@ Use superpowers-ross:finishing-a-development-branch.
 | "Subagents are slow and expensive, I'll skip the final review too" | Inline already removed the per-task reviewers. One review of the whole branch is the floor, not the ceiling. |
 | "The reviewer said Minor, so it's Minor" | The label graded the spec's silence. Grade what the person gets. Re-grade, then gate. |
 | "The fix is obvious, no need for a failing test first" | The failing test is the only proof the finding was real and is now gone. Without it you have a diff and a hope. |
-| "I'll fix the minors too while I'm in there" | Every minor you fix is a test, a fix, and a suite run your partner did not ask for. Ledger them; your partner decides. |
+| "Minors can wait for another day" | No later pass exists. Fix them in this pass, or rule each one not fixed with a real reason. |
+| "This Minor has no test, so I can't fix it properly" | A no-behaviour fix is verified by the suite staying green. Fix it and ledger that. |
+| "I know the steps, no need to write them to the ledger" | The step list is for after compaction, when you don't. Write it first, re-read it before each task. |
 
 ## Example Workflow
 
@@ -389,7 +434,8 @@ You: I'm using the executing-plans skill to implement this plan.
 
 [Read plan once: docs/superpowers/plans/feature-plan.md; spec read]
 [Resolve workspace: sdd-workspace docs/superpowers/plans/feature-plan.md — no ledger inside, fresh start]
-[Ledger created: identity line + Base: 9f8e7d6c5b4a39281706f5e4d3c2b1a098765432]
+[Ledger created: identity line + Base: 9f8e7d6c5b4a39281706f5e4d3c2b1a098765432 + the ## Steps block, verbatim]
+[Plan's Invariants: 1 line, anchored — "hooks only under ~/.config/superpowers/hooks (anchor: HOOK_DIR)"]
 [Pre-flight scan: 2 shared-interface rows, 4 self-consistency rows, clean; written to ledger]
 [Create todos for all tasks]
 
@@ -416,19 +462,18 @@ Task 2: Recovery modes
 
 ...
 
-[After all tasks: review-package plan 9f8e7d6 HEAD; dispatch code-reviewer, model opus]
-Reviewer: read through line 812. One Important finding — progress reporting interval hardcoded. Two Minor.
-[Re-grade: Important stands; minors → ledger as deferred]
-[Fix pass: test_progress_interval_configurable RED → extract PROGRESS_INTERVAL → GREEN; suite 12/12; commit]
+[After all tasks: review-package plan 9f8e7d6 HEAD; dispatch code-reviewer, model opus, with the invariants]
+Reviewer: read through line 812. Invariant holds (search evidence given). One Important finding — progress reporting interval hardcoded. Two Minor.
+[Re-grade: Important stands; both Minors enter the pass too]
+[Fix pass: test_progress_interval_configurable RED → extract PROGRESS_INTERVAL → GREEN; suite 12/12]
+[README usage example added; recovery.js split into verify.js/repair.js; suite 12/12; commit]
 [Ledger: Final: fixed hardcoded interval — test_progress_interval_configurable RED→GREEN, suite 12/12]
+[Ledger: Final: fixed README usage example — no behaviour change, suite 12/12]
+[Ledger: Final: fixed verify/repair split — no behaviour change, suite 12/12]
 [Ledger: Final review: fixes (commits e1f2a3b..c4d5e6f)]
 
 Rulings I made:
 - Task 2: install_hook → installHook (brief typo; cost if wrong: one rename)
-
-Deferred minors:
-- README lacks a usage example
-- recovery.js could split verify/repair into two files
 
 Plan: docs/superpowers/plans/feature-plan.md
 

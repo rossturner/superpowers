@@ -20,6 +20,26 @@ Subagent (general-purpose):
 
     [PLAN_OR_REQUIREMENTS]
 
+    ## Invariants
+
+    [INVARIANTS]
+
+    Each line is a rule that must hold everywhere in the codebase, not only
+    in this diff. For each one, search the codebase — grep and read,
+    starting from its anchors — for every code path it governs, and report
+    any path that breaks it, or that the branch should have changed and
+    didn't, with file:line. Under Invariants in your report, give for each
+    the search terms, hit count and files read, and the verdict. When this
+    section says "None", skip it.
+
+    ## Deferred Work to Fix
+
+    [DEFERRED]
+
+    These were found earlier and deferred to this review. They get fixed
+    after it. Confirm each is still present (or already gone), and flag any
+    you believe is wrong, with why. When this section says "None", skip it.
+
     ## Git Range to Review
 
     **Base:** [BASE_SHA]
@@ -122,6 +142,12 @@ Subagent (general-purpose):
 
     Read through line <L> of <L>.
 
+    ### Invariants
+    [Per invariant: searched [terms] ([N] hits; files read: …) — ✅ holds | ❌ file:line]
+
+    ### Deferred Work
+    [Per item: still present | already gone | wrong: why]
+
     ### Strengths
     [What's well done? Be specific.]
 
@@ -133,8 +159,10 @@ Subagent (general-purpose):
     #### Important (Should Fix)
     [Architecture problems, missing features, poor error handling, test gaps]
 
-    #### Minor (Nice to Have)
-    [Code style, optimization opportunities, documentation polish]
+    #### Minor (Fixed before finishing)
+    [Code style, optimization opportunities, documentation polish — the
+    fix pass after this review fixes these too, so report each one you
+    would want fixed]
 
     For each issue:
     - File:line reference
@@ -173,12 +201,16 @@ Subagent (general-purpose):
 - `[PLAN_OR_REQUIREMENTS]` — what it should do (plan file path, task text, or requirements)
 - `[BASE_SHA]` — starting commit
 - `[HEAD_SHA]` — ending commit
+- `[INVARIANTS]` — the plan's Invariants section (or the workspace's
+  `invariants.md`), verbatim with anchors; "None" when there are none
+- `[DEFERRED]` — the ledger's `minor (deferred)` and `parked` lines,
+  verbatim; "None" outside an SDD/Native run or when there are none
 - `[DIFF_FILE]` — the review package path printed by
   `skills/subagent-driven-development/scripts/review-package [PLAN_FILE] BASE HEAD`,
   generated before dispatch; if left empty, the reviewer falls back to
   building one with git
 
-**Reviewer returns:** the line it read through, Strengths, Issues (Critical / Important / Minor), Recommendations, Assessment
+**Reviewer returns:** the line it read through, Invariants, Deferred Work, Strengths, Issues (Critical / Important / Minor), Recommendations, Assessment
 
 ## Example Output
 

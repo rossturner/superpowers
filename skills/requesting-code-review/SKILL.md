@@ -51,11 +51,13 @@ Dispatch a `general-purpose` subagent, filling the template at [code-reviewer.md
 - `[BASE_SHA]` - Starting commit
 - `[HEAD_SHA]` - Ending commit
 - `[DIFF_FILE]` - The review package path from `review-package` (the reviewer generates one only as a fallback when it is empty)
+- `[INVARIANTS]` - Rules that must hold across the codebase, with search anchors, or "None"
+- `[DEFERRED]` - Earlier findings deferred to this review, to be fixed after it, or "None"
 
 **3. Act on feedback:**
 - Fix Critical issues immediately
 - Fix Important issues before proceeding
-- Note Minor issues for later
+- Fix Minor issues before finishing — "later" is never
 - Push back if reviewer is wrong (with reasoning)
 
 ## Example

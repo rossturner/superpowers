@@ -45,6 +45,9 @@ check_lacks "$PLANS" 'bite-sized' "no 'bite-sized'"
 check_lacks "$PLANS" 'frequent commits' "no 'Frequent commits'"
 check_has "$PLANS" 'one task per outcome|each task is one outcome' "one task per outcome"
 check_has "$PLANS" '/compact' "ends recommending /compact"
+check_has "$PLANS" '^## Invariants' "plan header has an Invariants section"
+check_has "$PLANS" 'anchor' "invariants carry search anchors"
+check_has "$PLANS" 'reviewers will check across the codebase' "ending lists the invariants"
 check_lacks "$PLANS" 'please review the plan[.?]' "no 'please review the plan'"
 check_lacks "$PLANS" 'Merge Pass' "no Merge Pass"
 
@@ -58,7 +61,38 @@ for f in "$SDD" "$NATIVE"; do
     check_has "$f" 'left for you' "$name: leaves unrecoverable actions for the user"
     check_has "$f" 'opus' "$name: names opus for the whole-branch review"
 done
+for f in "$SDD" "$NATIVE"; do
+    name=$(basename "$(dirname "$f")")
+    check_has "$f" '^## Steps \(' "$name: carries a Steps block for the ledger"
+    check_has "$f" 'FIRST action' "$name: writes the step list first"
+    check_has "$f" 'invariants\.md' "$name: writes invariants for plans without them"
+    check_has "$f" 'not fixed — ' "$name: an unfixed final finding needs a ruling"
+done
 check_lacks "$SDD" '1-2 files' "SDD model selection ignores file count"
+[ -f skills/subagent-driven-development/spec-reviewer-prompt.md ] && pass "spec-reviewer-prompt.md exists" || fail "spec-reviewer-prompt.md exists"
+[ -f skills/subagent-driven-development/code-quality-reviewer-prompt.md ] && pass "code-quality-reviewer-prompt.md exists" || fail "code-quality-reviewer-prompt.md exists"
+[ -e skills/subagent-driven-development/task-reviewer-prompt.md ] && fail "task-reviewer-prompt.md stays deleted" || pass "task-reviewer-prompt.md stays deleted"
+check_has "$SDD" "orchestrator's own model" "SDD reviewers run on the orchestrator's model"
+check_has "$SDD" 'in PARALLEL|in one message' "SDD dispatches both reviewers in parallel"
+check_lacks "$SDD" 'so it can triage' "SDD final review fixes deferred Minors, not triages them"
+check_lacks "$NATIVE" 'never enter[[:space:]]+the fix pass|Minors never enter' "Native fix pass includes Minors"
+check_has "$NATIVE" 'no behaviour change' "Native verifies no-behaviour fixes by a green suite"
+SPECREV=skills/subagent-driven-development/spec-reviewer-prompt.md
+check_has "$SPECREV" 'invariant' "spec reviewer checks invariants"
+check_has "$SPECREV" 'not only the' "spec reviewer searches beyond the diff"
+check_has "$SPECREV" 'search terms' "spec reviewer reports its search terms"
+check_has "$SPECREV" 'authority over the brief' "spec reviewer treats the spec as the authority"
+check_has skills/requesting-code-review/code-reviewer.md '\[INVARIANTS\]' "final reviewer receives the invariants"
+if git grep -qI 'task-reviewer-prompt' -- skills tests ':!tests/claude-code/test-fork-validation.sh'; then
+    fail "no reference to task-reviewer-prompt.md"
+else
+    pass "no reference to task-reviewer-prompt.md"
+fi
+if sed -n '/^## Steps (/,/^```/p' "$SDD" "$NATIVE" | grep -qE 'Ruling:|\(commits|^Task [0-9N]|^Final review:'; then
+    fail "step lists avoid ledger-parsed patterns"
+else
+    pass "step lists avoid ledger-parsed patterns"
+fi
 check_lacks skills/subagent-driven-development/implementer-prompt.md 'ask them now|ask questions' "implementer decides instead of asking"
 check_has skills/subagent-driven-development/implementer-prompt.md 'Decisions' "implementer reports Decisions"
 
