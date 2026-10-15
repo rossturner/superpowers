@@ -4,13 +4,16 @@
 
 Ross ran the fork's subagent-driven-development (SDD) on a 10-task build in
 prentora/api (online-safety moderation, 15 Oct 2026). Every step ran, but the
-reviews changed almost nothing: about 25 findings across five tasks were graded
-Minor and parked, and only one was fixed before the next task. Some of the
-parked "Minors" broke rules in the spec, such as error codes that revealed a
-restriction the spec says must stay invisible to its author. Ross had to ask
-why nothing was being fixed. The controller then improvised three things:
+reviews changed almost nothing:
 
-- a list of invariants, rules that must hold everywhere in the codebase;
+- About 25 findings across five tasks were graded Minor and parked. Only one was
+  fixed before the next task.
+- Some of the parked "Minors" broke rules in the spec, such as error codes that
+  revealed a restriction the spec says must stay invisible to its author.
+
+Ross had to ask why nothing was being fixed. The controller then improvised:
+
+- a list of invariants;
 - reviews that treat the spec as the authority and search unchanged code for
   every path an invariant governs;
 - a retroactive audit of Tasks 1–5.
@@ -18,12 +21,15 @@ why nothing was being fixed. The controller then improvised three things:
 The audit found about 4 Important and 15 Minor gaps that the per-task reviews
 had missed.
 
-Two failures, one root:
+There are two failures:
 
 1. **Steps get dropped.** Before the rebase onto obra v7.0.0, Ross often had to
    tell SDD to list its steps first, or it would skip the review step. The
    archived fork (`archive/pcvelz-7.2.0`) made "print a numbered summary of the
-   loop" the controller's first action. The rebase lost it.
+   loop" the controller's first action, so that review and bookkeeping steps
+   weren't skipped under load. The rebase lost it. The prentora run did not drop
+   a step; this one rests on Ross's experience before the rebase, and he asked
+   for it.
 2. **Review output isn't acted on.** obra's skill caps reviewer scope ("do not
    crawl the broader codebase") and parks Minor findings for the final review,
    which only triages them. Ross: anything left "as a minor for later" will
@@ -34,77 +40,93 @@ output changes what ships.
 
 ## Goals
 
-- SDD writes its step list into the ledger before any other work, and re-reads
-  it on resume. executing-plans (Native) does the same with its own list.
+- SDD and executing-plans (Native) write their step list into the ledger before
+  any other work, and re-read it on resume.
 - Each SDD task gets two focused reviewers in parallel, spec and quality, both
   on the orchestrator's model.
 - The spec reviewer treats the spec as the authority. It checks the plan's
-  invariants against the whole codebase, including unchanged code, for every
-  invariant the task touches.
-- Critical, Important and spec ❌ findings are fixed before the next task.
+  invariants against the whole codebase, including unchanged code.
+- Critical, Important and spec ❌ findings are fixed before the next task. So is
+  any finding that breaches a spec rule or invariant, whatever grade it was
+  given.
 - Minor findings are deferred to the final whole-branch review, and the final
-  fix wave fixes all of them. The only exception is a Minor the controller rules
-  wrong, with its reason ledgered.
+  fix wave fixes them. A Minor leaves unfixed only by a ledgered ruling that
+  says why.
 - writing-plans writes an Invariants section into every plan.
 
 ## Non-goals
 
 - No task size cap. Ross decided this: writing-plans keeps one task per outcome
-  with no size limit. Large diffs are handled by the two focused reviewers and
-  the invariant search, not by splitting tasks.
+  with no size limit. Two reviewers don't shrink the diff each one reads. What
+  they change is focus: each reads it for one job.
 - No change to implementer model selection. The judgment-based tier rule stays
   for implementers.
 - No general codebase crawl by task reviewers. The search outside the diff is
-  scoped to the invariants the task touches, plus the existing "check call sites
-  when a shared contract changes" rule.
+  scoped to invariants, plus the existing "check call sites when a shared
+  contract changes" rule.
 - No change to brainstorming, finishing, the ledger's commit-range contract, or
   the 5-round fix-loop cap.
 
 ## Anti-goals
 
-- A Minor that is "deferred" and then never fixed. If the final wave doesn't fix
-  it, a ledgered ruling must say why it is wrong.
-- A spec-rule breach graded Minor because it looks small.
+- A Minor that is "deferred" and then never fixed, with no ruling saying why.
+- A spec-rule breach graded Minor because it looks small, and left there.
 - A step list the controller improvises fresh each run. The list is fixed text
   in the skill.
+- A reviewer that says it checked an invariant without showing what it searched.
 
 ## The design
 
 ### 1. Step list (SDD and Native)
 
-The controller's first action, before reading the plan, is to write the run's
-numbered steps into the ledger. They go directly under the `Base:` line, so
-they survive compaction and are re-read on every resume. The skill holds the
-list as fixed text; the controller copies it and does not paraphrase it. On
-resume, the controller re-reads the step list along with the task lines.
+Each executor's skill holds its step list as fixed text. The controller's first
+action, before reading the plan, is to append that list to the ledger, copied,
+not paraphrased, under a heading line `## Steps (<executor>)`. On resume it
+re-reads the most recent Steps block. If that block belongs to the other
+executor, or there is none (a ledger from before this change), it appends its
+own first. The ledger stays append-only.
 
-The ledger's first two lines stay `# SDD ledger — plan: …` and `Base: <sha>`.
-finishing and the resume rules read these by position, so the step list goes
-after them.
+The ledger's first two lines stay `# SDD ledger — plan: …` and `Base: <sha>`,
+because finishing and the resume rules read them by position. A new ledger gets
+its Steps block straight after `Base:`.
+
+Other contracts read ledger lines by content, so the list's text must never
+contain these patterns:
+
+- `Ruling:`, which Finish collects;
+- `(commits`, which finishing's chain check parses;
+- a line beginning `Task <N>:` or `Final review:`.
 
 SDD's list:
 
 1. Resolve the workspace and check the ledger. Record `Base:` and this step list.
 2. Read the plan and its spec. Run the pre-flight conflict scan. Make sure an
-   invariants list exists: the plan's, or one written from the spec.
+   invariants list exists, with a search anchor on every line.
 3. For each task:
    - record BASE
    - dispatch the implementer
    - build the review package
    - run the spec and quality reviewers in parallel, both on the orchestrator's
      model
-   - fix every Critical, Important and ❌ finding, then re-review with only the
-     reviewer whose findings were addressed (5 rounds at most)
-   - log each Minor as deferred
+   - fix every Critical, Important and ❌ finding, and every finding that
+     breaches a spec rule or invariant, then run a scoped re-review (5 rounds at
+     most)
+   - log each remaining Minor as deferred
    - write the completion line to the ledger
-4. Run the final whole-branch review on Opus, with the invariants and every
-   deferred Minor. A single fix wave fixes all of them, apart from any Minor
-   ruled wrong. Then one scoped re-review.
+4. Run the final whole-branch review on Opus, with the invariants, the deferred
+   Minors and the parked findings. A single fix wave fixes everything it
+   returns, plus the deferred Minors and parked findings. Then one scoped
+   re-review. Anything left unfixed needs a ruling.
 5. List "Rulings I made", then run finishing.
 
-Native gets its own shorter list in the same position, matching its existing
-flow: tasks done in-session with TDD, then the Opus final review with the
-invariants, a fix pass that includes every Minor, then Rulings and finishing.
+Native's list follows its own flow:
+
+1. Set up the workspace and ledger, and record the step list.
+2. Read the plan and spec, and check the invariants.
+3. Do each task in-session with TDD.
+4. Run the Opus final review with the invariants.
+5. Run the fix pass, which includes every Minor.
+6. List the Rulings, then run finishing.
 
 ### 2. Invariants
 
@@ -118,114 +140,182 @@ not a task requirement. Examples from the prentora run:
   exactly the same 404 as a report on something that doesn't exist.
 - **Intake parity.** Every path that stops intake or hides a suspended
   instructor does the same for a restricted class, including candidate queries
-  and sweepers.
-- **Links only via FrontendUrls.** This is a codebase convention, not a spec rule.
+  and sweepers. Anchor: callers of `InstructorSuspensionConditions` and
+  `InstructorSuspensionGuard`.
+- **Links only via FrontendUrls.** This is a codebase convention, not a spec
+  rule. Anchor: string-built URLs outside `FrontendUrls`.
 
 **writing-plans** adds an `## Invariants` section to the plan header, after
-Global Constraints. Each line names the rule and the kinds of code path it
-governs, so a reviewer knows where to search. The planner writes it with the
-spec open. It includes the codebase conventions it found while exploring, and
-the ones the project's CLAUDE.md states. A plan with no cross-cutting rules
-says `None`. It does not omit the section.
+Global Constraints. Each line gives:
 
-**SDD and Native**, during setup: if the plan has no Invariants section (an
-older plan), the controller writes one from the spec into the workspace as
-`invariants.md`, and ledgers that it did. If the section says `None`, there is
-nothing to search.
+- the rule;
+- the kinds of code path it governs;
+- at least one search anchor: an existing symbol, pattern or file that a grep
+  finds, or the name of the thing the plan creates.
+
+The planner writes the section with the spec open. It includes the codebase
+conventions it found while exploring, and the ones the project's CLAUDE.md
+states. A plan with no cross-cutting rules says `None` and does not omit the
+section.
+
+**SDD and Native setup:**
+
+- If the plan has no Invariants section (an older plan), the controller writes
+  one from the spec into the workspace as `invariants.md` and ledgers that it
+  did.
+- When the plan has no reachable spec, invariants come from the plan alone.
+- The pre-flight scan checks every invariant line has an anchor and adds one
+  where it is missing.
+- If the section says `None`, there is nothing to search.
 
 ### 3. Two reviewers per task, in parallel
 
 The combined reviewer `task-reviewer-prompt.md` is replaced by two templates,
 `spec-reviewer-prompt.md` and `code-quality-reviewer-prompt.md`. They are
 dispatched in one message, both read-only, and both read the same review
-package. Both keep the current read-through contract ("read through line L") and
-the no-subagents rule.
+package. Both keep the current read-through contract ("read through line L")
+and the no-subagents rule. A task needs both reports before its findings are
+sorted.
 
 **Model:** both reviewers run on the orchestrator's own model: `opus` if the
 session is Opus, `sonnet` if it is Sonnet. The controller still passes `model`
 explicitly. This replaces the current "same tier rule as the implementer" rule
-and the >3,000-line floor for task reviewers. Scoped re-reviews keep their
-current rule (`haiku` or `sonnet`, scaled to the fix diff). The final review
-stays on `opus`.
+and the >3,000-line floor for task reviewers. The final review stays on `opus`.
 
-**Spec reviewer** gets:
+**Spec reviewer** owns the ✅/❌/⚠️ Spec Compliance verdict. Its inputs are:
 
-- the brief
-- the spec path
-- the global constraints
-- the invariants
-- the report
-- the package
+- the brief;
+- the spec path;
+- the global constraints;
+- the invariants, with the controller naming the ones whose paths this task's
+  outcome touches;
+- the report;
+- the package.
 
 Its rules:
 
 - The spec is the authority over the brief. A breach of a spec rule is ❌, never
   Minor, whatever its size.
-- For each invariant the task touches, it searches the codebase (grep and read,
-  not only the diff) for every path the invariant governs. It reports any path
-  that breaks the rule, or that the diff should have changed and didn't, with
-  file:line. For each invariant it touched, it states what it searched and what
-  it found.
+- For each named invariant, and any other invariant the diff touches, it
+  searches the codebase (grep and read, not only the diff) for every path the
+  rule governs. It reports any path that breaks the rule, or that the diff should
+  have changed and didn't, with file:line.
+- That includes breaches in code that existed before this branch: they are ❌
+  in this task.
+- For each invariant it reports the search terms, the hit count and the files it
+  read. An invariant it judges untouched needs a one-line reason.
 - The search is scoped to the invariants. It is not a general crawl.
-- ⚠️ "Cannot verify from diff" remains for requirements that span tasks and
-  that no invariant covers.
+- ⚠️ "Cannot verify from diff" remains for cross-task requirements that no
+  invariant covers.
 
-**Quality reviewer:** the current task reviewer's quality rubric (Part 2),
-calibration, and output format, unchanged. It keeps the named-risk rule for
-looking outside the diff.
+**Quality reviewer** owns the Task quality verdict. It uses the current task
+reviewer's quality rubric (Part 2), calibration and Issues format, without the
+Spec Compliance section, and keeps the named-risk rule for looking outside the
+diff.
 
 ### 4. Fix loop
 
-- Critical, Important and ❌ findings from both reviewers form one open list,
-  and enter the existing loop with its 5-round cap per task.
-- After a fix round, only the reviewer whose findings were addressed gets a
-  scoped re-review. When both reviewers had findings, the archive's rule
-  applies: each gets its own fix round and re-review, all counted against the
-  same cap.
-- The plan-mandated and plan-conflict rulings work as they do today.
+**Sorting.** Once both reports are in, the controller sorts findings into one
+open list:
 
-### 5. Minors
+- every Critical, Important and ❌ from either reviewer;
+- any finding of any grade that breaches a spec rule or invariant. This
+  re-grading only ever moves a finding up, and the controller ledgers it as
+  `Task <N>: Ruling: regraded — <finding> — breaches <rule>`.
 
-- During the task loop, Minors from either reviewer are ledgered as
-  `Task <N>: minor (deferred): <one-liner>`, as today.
-- Out-of-scope observations from re-reviews are ledgered the same way.
-- **SDD final review:** the final reviewer gets the deferred-Minor list as work
-  to fix, not to triage: "these get fixed; flag any you believe are wrong". The
-  single fix dispatch carries the final reviewer's findings and every deferred
-  Minor. The controller may exclude a Minor only with
-  `Final: Ruling: minor not fixed — <finding> — <why it is wrong> — <cost if wrong>`,
-  which reaches Rulings I made.
-- The final reviewer's own Minors join the same fix wave.
-- **Native final review:** the same rule. Minors enter the fix pass instead of
-  going to "Deferred minors". A Minor not fixed is a ruling with its reason. The
-  "never become rulings" sentence goes.
+The one exception is a breach in a path the plan gives to a later task. The
+controller sends it to that task, with the ruling `Task <N>: Ruling: deferred to
+Task <M> — <finding> — <why that task owns it>`, and carries it in Task M's
+dispatch.
+
+The remaining Minors are deferred. Plan-mandated and plan-conflict rulings work
+as they do today.
+
+**Rounds.** Each round is one fix dispatch carrying the whole open list, then
+one scoped re-review using `re-review-prompt.md`. The 5-round cap, the
+resume/fresh-implementer rule and the ledger line format are unchanged.
+
+**Re-review model.** When the round carried a spec or invariant finding, the
+re-review re-runs that invariant's search over the codebase, not only the fix
+diff, and runs on the orchestrator's model. Otherwise it keeps the current
+`haiku`/`sonnet` rule.
+
+**Change from the playback.** This replaces "re-review with only the reviewer
+whose findings were addressed". The re-review is a fresh scoped dispatch, not
+either reviewer, so one list with one fix per round keeps the full cap, and the
+ledger line needs no reviewer field.
+
+### 5. Minors and the final fix wave
+
+**During the task loop**, the remaining Minors are ledgered as
+`Task <N>: minor (deferred): <one-liner>`, as today. Out-of-scope observations
+from re-reviews are ledgered the same way.
+
+**SDD final review.** The final reviewer gets three things to work on:
+
+- the deferred Minors;
+- the parked findings;
+- the invariants.
+
+It treats these as work to be fixed, not triaged: "these get fixed; flag any you
+believe are wrong". The single fix dispatch carries all of its findings at every
+grade, plus every deferred Minor and parked finding. After the one re-review, a
+finding still unfixed is ledgered as:
+
+`Final: Ruling: not fixed — <finding> — <wrong | not a code change | fix failed: what was tried> — <cost if wrong>`
+
+That line reaches Rulings I made. "Not worth it" is not a reason. The current
+"triage which must be fixed" wording goes.
+
+**Native final review.** The same rule applies: Minors enter the fix pass
+instead of going to "Deferred minors".
+
+- **A Minor that changes behaviour** is verified by TDD, as now.
+- **A Minor that doesn't** (naming, duplication, docs) is verified by the suite
+  staying green, ledgered as
+  `Final: fixed <finding> — no behaviour change, suite <N>/<N>`.
+- An unfixed Minor gets the same `not fixed` ruling.
+
+The sentence "Minors never enter the fix pass, and never become rulings" goes,
+and so does the rationalization row "I'll fix the minors too while I'm in
+there". Its replacement says the opposite.
 
 ### 6. Final review inputs
 
 The final reviewer (`requesting-code-review/code-reviewer.md`), in both SDD and
-Native, also gets the invariants. For each invariant, it checks the whole branch
-against the rule across the codebase, as the spec reviewer does per task.
+Native, also gets the invariants. For each one it checks the whole branch
+against the rule across the codebase, and reports the same search evidence as
+the spec reviewer.
 
-### 7. Tests
+### 7. Upstream merge policy
+
+`task-reviewer-prompt.md` exists on obra's `upstream/main`. It stays deleted in
+this fork, like worktrees. When upstream edits it, port the change by hand into
+`spec-reviewer-prompt.md` or `code-quality-reviewer-prompt.md`, whichever owns
+that part. The README's "Divergence from upstream" section records this.
+
+### 8. Tests
 
 `tests/claude-code/test-fork-validation.sh` pins the new behaviour, so an
 upstream merge that reverts it fails:
 
 - SDD has `spec-reviewer-prompt.md` and `code-quality-reviewer-prompt.md`, and no
   `task-reviewer-prompt.md`.
-- SDD and Native carry the step list and say to write it to the ledger.
+- SDD and Native both contain a `## Steps (` block instruction.
 - writing-plans' header has an `## Invariants` section.
-- The spec reviewer prompt names invariants and searching unchanged code.
-- Neither SDD nor Native says Minors "never enter" the final fix pass.
-- The reviewers' model is the orchestrator's model.
+- The spec reviewer prompt names invariants, searching unchanged code, and
+  reporting search terms.
+- SDD's Final Review no longer says "triage". Native no longer says Minors
+  "never enter the fix pass".
+- SDD says the reviewers use the orchestrator's model.
 
 ## What's left to the builder
 
 - Exact wording of the step lists and reviewer prompts, within the rules above.
   writing-skills applies: Red Flags and rationalization tables are tuned
-  content. Add rows (for example "this Minor can wait"); don't rewrite existing
-  ones.
+  content. Add rows (for example "this Minor can wait"). Change existing rows
+  only where this design reverses them, such as Native's "fix the minors" row.
 - How to rework the dot graphs and the Example Workflow sections to show two
   reviewers.
-- README "Divergence from upstream" and CLAUDE.md updates describing the change.
+- README and CLAUDE.md updates describing the change.
 - The version bump (`-ross.2`).
