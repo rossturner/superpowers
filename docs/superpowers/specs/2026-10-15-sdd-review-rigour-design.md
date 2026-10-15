@@ -158,6 +158,12 @@ conventions it found while exploring, and the ones the project's CLAUDE.md
 states. A plan with no cross-cutting rules says `None` and does not omit the
 section.
 
+**Ross sees the list.** Ross wants to know the invariants once the spec is
+agreed. writing-plans' closing message lists the plan's invariants, one line
+each, next to its executor recommendation, so he can correct them before
+execution starts. When SDD or Native writes `invariants.md` itself, it prints
+the list in its next message and carries on; it doesn't wait for a reply.
+
 **SDD and Native setup:**
 
 - If the plan has no Invariants section (an older plan), the controller writes
@@ -302,7 +308,8 @@ upstream merge that reverts it fails:
 - SDD has `spec-reviewer-prompt.md` and `code-quality-reviewer-prompt.md`, and no
   `task-reviewer-prompt.md`.
 - SDD and Native both contain a `## Steps (` block instruction.
-- writing-plans' header has an `## Invariants` section.
+- writing-plans' header has an `## Invariants` section, and its Ending lists the
+  invariants.
 - The spec reviewer prompt names invariants, searching unchanged code, and
   reporting search terms.
 - SDD's Final Review no longer says "triage". Native no longer says Minors
