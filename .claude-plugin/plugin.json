@@ -1,7 +1,7 @@
 {
   "name": "superpowers-ross",
   "description": "Superpowers (Ross's fork): Claude Code skills library for brainstorming, planning, subagent-driven development, TDD and debugging",
-  "version": "7.0.0-ross.2",
+  "version": "7.0.0-ross.3",
   "author": {
     "name": "Ross Taylor-Turner"
   },

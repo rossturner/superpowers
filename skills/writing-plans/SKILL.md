@@ -7,7 +7,9 @@ description: Use when you have a spec or requirements for a multi-step task, bef
 
 ## Overview
 
-Write implementation plans for an engineer who has not seen this codebase or this spec. Assume they write idiomatic code in the project's language once they know the exact interface and the exact test, and that they will make a reasonable choice wherever the plan leaves one open. What they cannot know is what you decided: which files, which names and signatures, which values from the spec, which tests prove each task. Document those. Give them the whole plan as one task per outcome. DRY. YAGNI. TDD.
+Write comprehensive implementation plans assuming the engineer has zero context for our codebase and questionable taste. Document everything they need to know: which files to touch for each task, code, testing, docs they might need to check, how to test it. Give them the whole plan as one task per outcome. DRY. YAGNI. TDD.
+
+Assume they are a skilled developer, but know almost nothing about our toolset or problem domain. Assume they don't know good test design very well.
 
 **Announce at start:** "I'm using the writing-plans skill to create the implementation plan."
 
@@ -42,7 +44,7 @@ This structure informs the task decomposition. Each task delivers one outcome th
 
 ## Step Granularity
 
-**Each step is one action with a checkable result:**
+**Each step is one action (2-5 minutes):**
 - "Write the failing test" - step
 - "Run it to make sure it fails" - step
 - "Implement the minimal code to make the test pass" - step
@@ -50,6 +52,10 @@ This structure informs the task decomposition. Each task delivers one outcome th
 - "Commit" - step
 
 A task repeats this cycle as many times as its outcome needs.
+
+**One cycle per layer.** A task whose outcome spans layers (domain rule, repository, service, endpoint, email) runs one cycle per layer, in build order: that layer's failing tests, the FAIL run, its code, the PASS run. It never has one step that writes all the task's tests followed by one step that implements everything. Each cycle's tests cover only the behaviour that cycle's code adds.
+
+**Interface changes come before the red test.** When a cycle changes the signature of existing code, give that change its own step first: change the signature, update every caller, run the suite green. When a cycle adds methods in a compiled language, a stub step first (the signature with a body that throws or returns a default) lets the FAIL run compile and fail on an assertion.
 
 ## Plan Document Header
 
@@ -115,9 +121,12 @@ def test_specific_behavior():
 
 Run: `pytest tests/path/test.py::test_name -v` Expected: FAIL with "function not defined"
 
-- [ ] **Step 3: Implement `function(input: InputType) -> ResultType` in `exact/path/to/file.py`**
+- [ ] **Step 3: Write minimal implementation**
 
-One line on the approach when the signature and the test leave a choice (which library call, which data structure); a code block only for an algorithm they do not determine.
+```python
+def function(input):
+    return expected
+```
 
 - [ ] **Step 4: Run test to verify it passes**
 
@@ -131,16 +140,15 @@ git commit -m "feat: add specific feature"
 ```
 ````
 
-## What a Step Contains
+## No Placeholders
 
-A step is done when the implementer can write exactly one reasonable thing from it. That is the whole requirement: unambiguous, not complete. Each kind of step carries what makes it unambiguous and nothing more:
-
-- **A test step:** the test's name and its assertions, as code, with the spec's exact values in them.
-- **A code step:** the exact signature (name, parameters, return type), the file it lives in, and the specific values the spec pins. The implementer writes the body. A body appears only for an algorithm the signature and tests do not determine, or for exact copy the spec fixes.
-- **A verification step:** the command to run and the output that means it passed.
-- **A reference to another task:** that task's Interfaces block says what to use; the plan does not repeat that task's code.
-
-A plan is the set of decisions the implementer cannot make alone. A plan longer than the code it describes has written the code instead. Lines that decide nothing ("TBD", "handle edge cases", "add appropriate validation", "write tests for the above", a type or function no task defines) are the opposite failure, and the self-review catches both.
+Every step must contain the actual content an engineer needs. These are **plan failures** — never write them:
+- "TBD", "TODO", "implement later", "fill in details"
+- "Add appropriate error handling" / "add validation" / "handle edge cases"
+- "Write tests for the above" (without actual test code)
+- "Similar to Task N" (repeat the code — the engineer may be reading tasks out of order)
+- Steps that describe what to do without showing how (code blocks required for code steps)
+- References to types, functions, or methods not defined in any task
 
 ## Self-Review
 
@@ -148,7 +156,7 @@ After writing the complete plan, look at the spec with fresh eyes and check the 
 
 **1. Spec coverage:** Skim each section/requirement in the spec. Can you point to a task that implements it? List any gaps.
 
-**2. Step scan:** Every step must let the implementer write exactly one reasonable thing, and no step may carry more than that: a line that decides nothing is a gap, a function body the signature and tests already determine is a transcript. Fix both.
+**2. Placeholder scan:** Search your plan for red flags — any of the patterns from the "No Placeholders" section above. Fix them.
 
 **3. Type consistency:** Do the types, method signatures, and property names you used in later tasks match what you defined in earlier tasks? A function called `clearLayers()` in Task 3 but `clearFullLayers()` in Task 7 is a bug.
 
@@ -156,7 +164,7 @@ After writing the complete plan, look at the spec with fresh eyes and check the 
 
 **5. Invariants:** For each rule the spec states as holding everywhere — and each codebase convention the tasks' code must follow — is there an Invariants line with an anchor a grep would find? A rule only some tasks' briefs mention is the one a reviewer misses in the code no task touches.
 
-**6. Proportion:** Compare the plan's length to the spec's. A plan several times longer than the spec it implements is a transcript of the program, not a plan. If code blocks are most of the document, replace bodies with signatures, test names and assertions, and check that each step is still unambiguous.
+**6. Red order:** For every code step, is there an earlier step that writes the failing test for that code, and a run of it expected to FAIL with the failure named? A step that both writes tests and implements ("Implement X. Test both.") is two steps: split it. A FAIL that can only come from a compile error outside the test means a missing interface step (see Step Granularity).
 
 If you find issues, fix them inline. No need to re-review — just fix and move on. If you find a spec requirement with no task, add the task.
 

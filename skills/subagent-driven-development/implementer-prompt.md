@@ -26,8 +26,8 @@ Subagent (general-purpose):
 
     ## Your Job
 
-    1. Implement exactly what the task specifies
-    2. Write tests (following TDD if task says to)
+    1. Load superpowers-ross:test-driven-development before writing any code. It governs every step of this task; a brief whose steps already say "write the failing test first" does not exempt you from reading it.
+    2. Implement exactly what the task specifies, test first: run each test and watch it fail for the expected reason before writing the code that makes it pass
     3. Verify implementation works
     4. Commit your work
     5. Self-review (see below)
@@ -86,7 +86,7 @@ Subagent (general-purpose):
 
     **Testing:**
     - Do tests actually verify behavior (not just mock behavior)?
-    - Did I follow TDD if required?
+    - Did every test I wrote fail for the expected reason before its code existed?
     - Are tests comprehensive?
     - Is the test output pristine (no stray warnings or noise)?
 
@@ -101,9 +101,10 @@ Subagent (general-purpose):
     Write your full report to [REPORT_FILE]:
     - What you implemented (or what you attempted, if blocked)
     - What you tested and test results
-    - **TDD Evidence** (if TDD was required for this task):
-      - RED: command run, relevant failing output before implementation, and why the failure was expected
+    - **TDD Evidence** (required):
+      - RED: for each test you wrote, the command, its failing output before its code existed, and why that failure was expected
       - GREEN: command run and relevant passing output after implementation
+      - A test written after its code: name it, then prove it — stash or revert the production change, run the test and show it fail, restore — and record that run as its RED
     - Files changed
     - **Decisions:** each call you made where the brief left it open — what you decided and why (write "None" if the brief settled everything)
     - Self-review findings (if any)

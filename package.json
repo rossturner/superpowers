@@ -1,6 +1,6 @@
 {
   "name": "superpowers-ross",
-  "version": "7.0.0-ross.2",
+  "version": "7.0.0-ross.3",
   "description": "Superpowers skills and runtime bootstrap for coding agents",
   "type": "module",
   "keywords": [
