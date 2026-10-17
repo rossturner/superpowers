@@ -36,7 +36,7 @@ Your FIRST action on invoking this skill, before reading the plan: write this sk
 Step 1. Resolve the workspace and check the ledger. Record Base and this step list.
 Step 2. Read the plan and its spec. Run the pre-flight conflict scan. Make sure an invariants list exists, with a search anchor on every line.
 Step 3. For each task: record BASE; dispatch the implementer; build the review package; run the spec and quality reviewers in parallel, both on the orchestrator's model; fix every Critical, Important and spec failure, and every finding that breaches a spec rule or invariant, then run a scoped re-review (5 rounds at most); log each remaining Minor as deferred; write the completion line.
-Step 4. Run the final whole-branch review on opus with the invariants, the deferred Minors and the parked findings. One fix wave fixes everything it returns plus every deferred Minor and parked finding, then one scoped re-review. Anything left unfixed needs a ruling.
+Step 4. Run the final whole-branch review on opus with the invariants, the deferred Minors and the parked findings. A fix wave fixes everything it returns plus every deferred Minor and parked finding, then a scoped re-review; whatever the re-review leaves open, including breakage the wave made, goes to the next wave (3 waves at most). Anything left unfixed needs a ruling.
 Step 5. List the rulings I made, then run finishing-a-development-branch.
 ```
 
@@ -100,7 +100,7 @@ digraph process {
     "Setup: ledger check (Base: + Steps on creation), read plan + spec, invariants, pre-flight review" [shape=box];
     "More tasks remain?" [shape=diamond];
     "Dispatch final code reviewer (../requesting-code-review/code-reviewer.md) with invariants, deferred Minors, parked findings" [shape=box];
-    "ONE fix dispatch: all final findings + every deferred Minor and parked finding; one scoped re-review; rule on residuals" [shape=box];
+    "Fix wave W of 3: all final findings + every deferred Minor and parked finding (W>1: what the last re-review left open); scoped re-review; rule on residuals" [shape=box];
     "Ledger the final review; final message: Rulings I made + plan path" [shape=box];
     "Use superpowers-ross:finishing-a-development-branch" [shape=box style=filled fillcolor=lightgreen];
 
@@ -133,8 +133,8 @@ digraph process {
     "Append completion to ledger, mark todo complete" -> "More tasks remain?";
     "More tasks remain?" -> "Dispatch implementer subagent (./implementer-prompt.md)" [label="yes"];
     "More tasks remain?" -> "Dispatch final code reviewer (../requesting-code-review/code-reviewer.md) with invariants, deferred Minors, parked findings" [label="no"];
-    "Dispatch final code reviewer (../requesting-code-review/code-reviewer.md) with invariants, deferred Minors, parked findings" -> "ONE fix dispatch: all final findings + every deferred Minor and parked finding; one scoped re-review; rule on residuals";
-    "ONE fix dispatch: all final findings + every deferred Minor and parked finding; one scoped re-review; rule on residuals" -> "Ledger the final review; final message: Rulings I made + plan path";
+    "Dispatch final code reviewer (../requesting-code-review/code-reviewer.md) with invariants, deferred Minors, parked findings" -> "Fix wave W of 3: all final findings + every deferred Minor and parked finding (W>1: what the last re-review left open); scoped re-review; rule on residuals";
+    "Fix wave W of 3: all final findings + every deferred Minor and parked finding (W>1: what the last re-review left open); scoped re-review; rule on residuals" -> "Ledger the final review; final message: Rulings I made + plan path";
     "Ledger the final review; final message: Rulings I made + plan path" -> "Use superpowers-ross:finishing-a-development-branch";
 }
 ```
@@ -268,7 +268,7 @@ Once both reports are in, sort every finding into ONE open list:
 The loop triggers when the open list is not empty. Before it starts, three routes leave it:
 
 - **A breach in a path the plan gives to a later task** goes to that task: ledger `Task <N>: Ruling: deferred to Task <M> — <finding> — <why that task owns it>` and carry the finding in Task M's dispatch. Only an explicit plan assignment qualifies; "a later task is near there" does not.
-- **Remaining Minors** are deferred, not dropped: ledger each as `Task <N>: minor (deferred): <one-liner>`. The final fix wave fixes every one of them (see Final Review). Deferred means "fixed in the final wave", never "maybe later" — nothing after the final wave will pick them up.
+- **Remaining Minors** are deferred, not dropped: ledger each as `Task <N>: minor (deferred): <one-liner>`. The final fix waves fix every one of them (see Final Review). Deferred means "fixed in the final waves", never "maybe later" — nothing after the final waves will pick them up.
 - A finding labeled plan-mandated — or any finding that conflicts with what the plan's text requires — is yours to rule on: weigh the finding against the plan text, decide with the spec as the binding authority, and ledger the ruling before you act on it. Do not dismiss the finding because the plan mandates it, and do not dispatch a fix that contradicts the plan without a recorded ruling. Everything else enters the loop. A fix round is one fix dispatch carrying the whole open list, from both reviewers, plus one scoped re-review. Five rounds maximum per task:
 
 **Rounds 1-3 — resume the original implementer.** Send it the open findings verbatim. Its context is intact: it knows the task, the code, and its own choices. If your harness cannot send another message to a live subagent, dispatch a fresh implementer carrying the brief path, the report-file path, and the findings — the report file is the persistent memory either way.
@@ -305,9 +305,13 @@ Then mark the todo complete and move on. Never move to the next task while the r
 
 The final whole-branch review gets a package too: run `bash scripts/review-package PLAN_FILE BASE HEAD` (BASE = the ledger's `Base:` line, the commit HEAD was on before any task ran) and include the printed path in the final review dispatch, so the final reviewer reads one file instead of re-deriving the branch diff with git commands. Dispatch on `opus` (see Model Selection), using superpowers-ross:requesting-code-review's [code-reviewer.md](../requesting-code-review/code-reviewer.md). Give it the invariants list verbatim — it checks each across the whole codebase and reports its search evidence — and the ledger's `minor (deferred)` and `parked` lines as work to be fixed, not triaged: "these get fixed; flag any you believe are wrong, with why".
 
-Dispatch ONE fix subagent with everything left: the final reviewer's findings at every grade, Minor included, plus every deferred Minor and every parked finding it did not show to be wrong — not one fixer per finding. Per-finding fixers each rebuild context and re-run suites; a real session's final-review fix wave cost more than all its tasks combined. Then run exactly one scoped re-review of the fix wave (`bash scripts/review-package PLAN_FILE FIX_BASE HEAD` over the fix range, [re-review-prompt.md](re-review-prompt.md)). There is no second fix wave. Every item the wave did not fix — the re-review says NOT ADDRESSED, or you excluded it before dispatch — gets a ruling: `Final: Ruling: not fixed — <finding> — <wrong: why | not a code change | fix failed: what was tried> — <cost if wrong>`. "Not worth it", "polish" and "can wait" are not reasons: nothing after this wave will pick the item up. Residual load-bearing findings go at the top of Rulings I made.
+Dispatch ONE fix subagent with everything left: the final reviewer's findings at every grade, Minor included, plus every deferred Minor and every parked finding it did not show to be wrong — not one fixer per finding. Per-finding fixers each rebuild context and re-run suites; a real session's final-review fix wave cost more than all its tasks combined. Then run a scoped re-review of the fix wave (`bash scripts/review-package PLAN_FILE FIX_BASE HEAD` over the wave's range, [re-review-prompt.md](re-review-prompt.md)).
 
-Then ledger the outcome: `Final review: fixes (commits <a7>..<b7>)` over the fix wave's range, or `Final review: clean` when there was nothing to fix.
+**Further waves, 3 waves at most.** When the re-review leaves anything open — an item NOT ADDRESSED, or breakage the wave made in its own diff, at any grade — run the next wave: resume the same fix subagent with exactly those items, then a scoped re-review over that wave's range. Issues the re-reviewer noticed outside the wave's diff ride along when a next wave runs; they never start one. A later wave carries only what the previous re-review left open, never a fresh sweep of the branch. After each wave, ledger `Final: fix wave <W>/3 (<X> addressed, <Y> open — <finding one-liners>; commits <a7>..<b7>)`.
+
+When wave 3's re-review still leaves items open, stop dispatching. Every item no wave fixed — still open after the last wave, or excluded by you before dispatch — gets a ruling: `Final: Ruling: not fixed — <finding> — <wrong: why | not a code change | fix failed after <W> waves: what was tried> — <cost if wrong>`. "Not worth it", "polish" and "can wait" are not reasons: nothing after the last wave will pick the item up. Residual load-bearing findings go at the top of Rulings I made.
+
+Then ledger the outcome: `Final review: fixes (commits <a7>..<b7>)` over the range of all the waves, from the first wave's FIX_BASE to the last wave's head, or `Final review: clean` when there was nothing to fix.
 
 ## Finish
 
@@ -331,7 +335,8 @@ Use superpowers-ross:finishing-a-development-branch.
 | "Ledger bookkeeping is overhead" | The ledger is what survives compaction. Controllers without one have re-dispatched entire completed task sequences. |
 | "My human partner would know the answer, I'll just ask" | The run does not wait on a human. Answer from the spec, plan and code; where they are silent, rule and ledger it. |
 | "The implementer spawned its own reviewer — free extra assurance" | It's a duplicate seat reviewing the same diff; the task review is the gate. A worker-spawned reviewer is a defect to flag, not rigor. |
-| "It's only Minor, it can wait" | It waits for the final wave, and the final wave fixes it. Nothing after that wave picks it up — "later" is never. |
+| "It's only Minor, it can wait" | It waits for the final waves, and they fix it. Nothing after them picks it up — "later" is never. |
+| "The wave broke something small, I'll rule on it and finish" | A ruling ships the breakage. What a wave breaks goes to the next wave until the third. |
 | "The reviewer graded this spec breach Minor" | Grade is size; a spec or invariant breach is a failure at any size. Re-grade it into the open list. |
 | "That breach predates this branch, not my task" | An invariant breach the search finds is this task's ❌. The run leaves the rule holding. |
 | "I know the steps, no need to write them to the ledger" | The step list is for after compaction, when you don't. Write it first, re-read it before each task. |
@@ -408,7 +413,7 @@ Re-reviewer: Read through line 96 of 96.
 Final reviewer: Read through line 1843 of 1843. All requirements met.
   Invariants hold (search evidence given). Deferred Minor install.js:30 — still present.
 
-[ONE fix dispatch: the deferred Minor; scoped re-review: ADDRESSED]
+[Fix wave 1/3: the deferred Minor; scoped re-review: ADDRESSED, no new breakage, so no wave 2]
 [Ledger: Final review: fixes (commits c9d0e1f..f2a3b4c)]
 [Final message: Rulings I made, plan path — workspace left for finishing]
 
