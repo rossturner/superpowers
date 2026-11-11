@@ -31,7 +31,7 @@ Tests failing (<N> failures). Must fix before completing:
 
 ## Step 2: Read the Base
 
-Run `../subagent-driven-development/scripts/sdd-workspace PLAN_FILE`, relative to this skill's directory, from the project's working directory:
+Run `../subagent-driven-development/scripts/sdd-workspace PLAN_FILE` by its absolute path, from the project's working tree:
 
 ```bash
 WS=$(bash <this skill's directory>/../subagent-driven-development/scripts/sdd-workspace PLAN_FILE)

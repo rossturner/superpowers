@@ -21,7 +21,7 @@ Nothing pauses the run. Each case below is ruled and ledgered, and the run goes 
 
 - **Unrecoverable actions are not taken.** Anything not recoverable from git history (`git clean`, `reset --hard`, deleting untracked or ignored data, touching data outside the repo), anything security-sensitive, and anything outward-facing (push, merge, publish). Ledger `Ruling: left for you — <action> — <why>` and continue with the rest. Everything else proceeds.
 - **A task whose verification needs such an action** is done as far as it can be, closed with `task-done` on the tests that can run, and marked unverified: `Task <N>: Ruling: unverified — <the verification not run> — dependents: <...>`. When no test can run, there is no `task-done` line, so the ruling ends with ` (commits <BASE7>..<HEAD7>)` to keep the ledger's ranges chained. Its dependents proceed, and each is flagged in "Rulings I made".
-- **A plan broken past guessing** gets a ruling on its most defensible reading. If no reading gives a path that works, the task goes down the ladder: rule → amend once → abandon (see "The plan is wrong" below).
+- **A plan broken past guessing** gets a ruling on its most defensible reading. If no reading gives a path that works, the task goes down the ladder: rule → amend once → abandon (see [references/ladder.md](references/ladder.md)).
 - **Items the plan leaves to the builder** are ruled and ledgered the same way.
 
 ## The Steps
@@ -99,7 +99,7 @@ Conversation memory does not survive compaction. An inline executor that loses i
 
 The workspace and ledger are shared with superpowers-ross:subagent-driven-development — same directory, same format — so a plan can change executors mid-flight and the new one resumes from the same ledger.
 
-- Each plan owns a workspace: at skill start, run `../subagent-driven-development/scripts/sdd-workspace PLAN_FILE` — it prints the plan's git-ignored directory (`<repo-root>/.superpowers/sdd/<plan-basename>/`), home to every artifact for THIS plan: ledger, briefs, review packages. Another plan's directory is never yours to read or write.
+- Each plan owns a workspace: at skill start, run `../subagent-driven-development/scripts/sdd-workspace PLAN_FILE` by its absolute path, from the working tree you're executing in — it prints the plan's git-ignored directory (`<repo-root>/.superpowers/sdd/<plan-basename>/`), home to every artifact for THIS plan: ledger, briefs, review packages. Another plan's directory is never yours to read or write.
 - Check for this plan's ledger at `<workspace>/progress.md`. If its first line names your plan file, a task is DONE when the ledger has a `Task <N>: complete` line, a `Task <N>: Ruling: abandoned` line, or a `Task <N>: Ruling: unverified` line that ends with `(commits …)` — do not redo it; resume at the first task with none of these. The ledger is shared with superpowers-ross:subagent-driven-development, so honour all three whichever executor wrote them. Their commits exist in git even when your context no longer remembers making them: after compaction, trust the ledger and `git log` over your own recollection. A ledger whose first line names a different plan file is another plan's progress: leave it and start your own, fresh.
 - With no ledger of your own, create it now, before any `task-start` or `task-done`, with its identity as the first line and the commit the work starts from as the second:
   ```
@@ -116,7 +116,7 @@ Read the plan once, note its context and Global Constraints, and create a todo p
 
 Before Task 1, scan the plan for conflicts between tasks. The plan's Interfaces blocks tell you where to look: for every task that consumes what an earlier task produces, one ledger row — the two tasks, what one produces against what the other consumes, and what you found. Tasks that share nothing get no row; a plan whose tasks share nothing gets the single line `Pre-flight: no shared interfaces`. Rule on each conflict a row surfaces with the spec as the binding authority, record the ruling beside its row, and start Task 1. Each task's own text is checked when you read its brief, not here.
 
-**Invariants.** The plan's `## Invariants` section lists the rules that must hold in code no task was asked to touch; the final reviewer checks each across the whole codebase. During the pre-flight scan, check every line has a search anchor (a symbol, pattern or file a grep finds); where one is missing, find one and write the anchored list to `<workspace>/invariants.md`. A plan with no Invariants section gets one written from the spec and the codebase's conventions (including the project's CLAUDE.md) into `<workspace>/invariants.md`: ledger `Setup: invariants written by the executor (<count>)` and print the list to your human partner in your next message, one line each, without waiting for a reply. `None` in the plan means there is nothing to search.
+**Invariants.** During the pre-flight scan, read [references/plan-invariants.md](references/plan-invariants.md) and follow it: every invariant needs a search anchor, and a plan without an Invariants section gets a list written to `<workspace>/invariants.md`. The final reviewer checks each one across the whole codebase.
 
 ## The Task Loop
 
@@ -124,7 +124,7 @@ Everything you print, and every tool result, stays resident in your context for 
 
 ### 1. Take the task
 
-- Run this skill's `scripts/task-start PLAN_FILE N`. It prints the brief path and BASE (the commit the task's range is cut from) in one call. Read the brief for every task, including ones you remember from setup: what you remember is a summary, the brief has the exact values, signatures, and test cases.
+- Run this skill's `scripts/task-start PLAN_FILE N` by its absolute path, from the working tree you're executing in. It prints the brief path and BASE (the commit the task's range is cut from) in one call. Read the brief for every task, including ones you remember from setup: what you remember is a summary, the brief has the exact values, signatures, and test cases.
 - Mark the task's todo in_progress.
 
 Every tool call is a turn that re-reads your whole context. Bookkeeping rides along with work — a ledger append in the same call as the commit, never in a call of its own.
@@ -139,11 +139,7 @@ Every step that runs a command has an `Expected:` line. Run the command, read it
 - **The code is wrong.** Use superpowers-ross:systematic-debugging. Find the cause; never patch the symptom to make the step's output match.
 - **The plan is wrong** — a step contradicts the spec, an interface from an earlier task doesn't match what this task consumes, a command that cannot work. Rule on the smallest change that satisfies the spec, ledger it as `Task <N>: Ruling: <finding> — <what you decided and why>`, and continue. The ruling is carried, not remembered: later tasks that touch the same interface read it from the ledger.
 
-When no ruling gives the task a path that works, climb the ladder — there is no implementer to re-dispatch, so it is short:
-
-1. **Rule** on the most defensible reading, as above.
-2. **Amend the task once.** Write the amendment into the task's brief in the workspace and ledger it as `Task <N>: Ruling: amended — <what changed> — <why>`. Never edit the plan file and never renumber tasks. One amendment; not a second. `task-start` rewrites the brief from the plan, so on resume re-apply any `Task <N>: Ruling: amended` line to the regenerated brief before working it.
-3. **Abandon.** If the task left uncommitted changes, commit them as `wip: abandoned Task <N>` — never reset or clean them away. Then ledger `Task <N>: Ruling: abandoned — <why> — dependents: <each amended to stand alone, or abandoned too>`, ending with ` (commits <a7>..<b7>)` when the task left commits (the range runs from its BASE to HEAD, covering the `wip:` commit, so the ledger's ranges still chain). Then take the next task.
+When no ruling gives the task a path that works, read [references/ladder.md](references/ladder.md) and climb it: rule → amend once → abandon, each ledgered. The run goes on either way.
 
 Commit as the plan's commit steps say. A task that spans several commits is fine; BASE is what the review range is cut from, never `HEAD~1`.
 
@@ -160,42 +156,15 @@ Before a task's ledger line, all of the following are true, with evidence in thi
 
 ### 4. Complete the task
 
-Run this skill's `scripts/task-done PLAN_FILE N BASE -- <test command>` with the test command the brief names for the whole task. It runs the tests, keeps the full output in the workspace, prints the tail, and — only if they pass — appends the completion line to the ledger:
+Run this skill's `scripts/task-done PLAN_FILE N BASE -- <test command>` by its absolute path, from the working tree you're executing in, with the test command the brief names for the whole task. It runs the tests, keeps the full output in the workspace, prints the tail, and — only if they pass — appends the completion line to the ledger:
 
 `Task <N>: complete (commits <base7>..<head7>, tests: <command> → <result>)`
 
 A failing run records nothing; the task is not complete. When it records, mark the todo complete and take the next task.
 
-## Final Review
+## Final Review and Finish
 
-Run `../subagent-driven-development/scripts/review-package PLAN_FILE <Base> HEAD` (`<Base>` = the ledger's `Base:` line) and review from the file it prints. Its first line gives the package's total line count.
-
-**With a subagent tool:** dispatch the reviewer with `model: "opus"` — the whole-branch review is a judgment task — using superpowers-ross:requesting-code-review's [code-reviewer.md](../requesting-code-review/code-reviewer.md), with the package path, the plan and spec paths, the invariants list verbatim (it checks each across the whole codebase, not only the diff, and reports the search terms, hit count and files read), the plan's Review Focus section verbatim if it has one (the input classes and failure modes the plan's tests do not exercise — the reviewer checks each deliberately), and a pointer to the ledger's `Ruling:` lines so it can weigh the calls you made. Specify the model explicitly; an omitted model inherits the session's, which may not be the most capable. This is the one fresh context the whole run buys. Do not skip it, and do not replace it with your own read of the diff.
-
-The reviewer reads the package in ~1,000-line chunks with Read's `offset` until a Read returns the end, halving the chunk if a Read fails on size, reading each part once, and states "read through line L". A report without that statement is re-dispatched once; if the second also lacks it, rule on what to do with it and ledger the ruling.
-
-**Without a subagent tool:** read code-reviewer.md and perform that review yourself against the package in the same chunks, as a separate pass after the last task's ledger line. Ledger `Final: Ruling: self-review only — no subagent tool — the author's blind spots went unchecked` and list it first in "Rulings I made": a self-review by the author is weaker than a fresh reviewer, and your human partner should know which review the branch got.
-
-Sort the findings before you act on any of them. The reviewer's severity labels are advice; the gate is yours. Its "Declined to judge" list is yours too: every line there is a ruling you make and ledger, exactly like a plan conflict — `Final: Ruling: <behavior the reviewer set aside> —
-<what a reasonable person using this software gets, and why that stands
-or why it is now a finding> — <cost if wrong>`. Re-grade first, by effect: the spec is a vision document, and a finding's grade is what a reasonable person using this software gets if it ships, not whether the spec names the input that triggers it — a reviewer who set a finding at Minor because the spec was silent has graded the spec, not the effect. Then:
-
-- **Every finding enters the fix pass**, Critical through Minor. A Minor left for later is never picked up: this pass is the last one.
-
-Fix them yourself — you are the implementer here — in ONE pass:
-
-- **A fix that changes behaviour** is verified by TDD, not by a second reviewer: write the test that reproduces the finding, watch it fail, make it pass, then run the whole suite. Ledger `Final: fixed <finding> — <test name> RED→GREEN, suite <N>/<N>`.
-- **A fix that changes no behaviour** (naming, duplication, structure, docs) has no failing test to write. It is verified by the whole suite staying green. Ledger `Final: fixed <finding> — no behaviour change, suite <N>/<N>`. When the pass is over, ledger the wave as `Final review: fixes (commits <a7>..<b7>)`, from the HEAD before the first fix to the HEAD after the last — or `Final review: clean` when there was nothing to fix. A fix without a test that failed first is not verified; a suite that is not green after the pass means the pass is not over. Do not dispatch a re-review: it would re-read a diff whose covering tests already answer "addressed" and whose suite run already answers "broke nothing".
-
-A finding you do not fix is a ruling — `Final: Ruling: not fixed — <finding> — <wrong: why | not a code change | fix failed: what was tried> — <cost if wrong>` — and reaches your human partner in the rulings list. "Not worth it", "polish" and "can wait" are not reasons. There is no second fix pass.
-
-## Finish
-
-Collect every ledger line containing `Ruling:` into your final message under "Rulings I made", each with what it costs if wrong. List first, in this order: abandoned tasks, "left for you" actions, unverified tasks (with the dependents flagged under each), and residual load-bearing findings — final-review findings you ruled not to fix. Then every other ruling, in the order you made them. The list is exhaustive. Your final message is the only place the decisions you took on your human partner's behalf — and the findings you did not fix — reach them. End it with the plan path.
-
-Do not delete the workspace: superpowers-ross:finishing-a-development-branch reads `Base:` and the chained commit ranges from the ledger, and deletes the workspace when it is done.
-
-Use superpowers-ross:finishing-a-development-branch.
+When every task has its ledger line, read [references/final-review.md](references/final-review.md) and follow it, even if you read it earlier in this session. It covers the whole-branch review on `opus` with the invariants, the ONE fix pass that fixes every finding at every grade, the `not fixed — ` ruling an unfixed finding needs (a fix with no behaviour change is verified by a green suite), and how you finish: the "Rulings I made" list, then superpowers-ross:finishing-a-development-branch. The run is not over until that file's last step is done.
 
 ## Common Rationalizations
 
@@ -217,56 +186,3 @@ Use superpowers-ross:finishing-a-development-branch.
 | "Minors can wait for another day" | No later pass exists. Fix them in this pass, or rule each one not fixed with a real reason. |
 | "This Minor has no test, so I can't fix it properly" | A no-behaviour fix is verified by the suite staying green. Fix it and ledger that. |
 | "I know the steps, no need to write them to the ledger" | The step list is for after compaction, when you don't. Write it first, re-read it before each task. |
-
-## Example Workflow
-
-```
-You: I'm using the executing-plans skill to implement this plan.
-
-[Read plan once: docs/superpowers/plans/feature-plan.md; spec read]
-[Resolve workspace: sdd-workspace docs/superpowers/plans/feature-plan.md — no ledger inside, fresh start]
-[Ledger created: identity line + Base: 9f8e7d6c5b4a39281706f5e4d3c2b1a098765432 + the ## Steps block, verbatim]
-[Plan's Invariants: 1 line, anchored — "hooks only under ~/.config/superpowers/hooks (anchor: HOOK_DIR)"]
-[Pre-flight scan: 2 shared-interface rows, 4 self-consistency rows, clean; written to ledger]
-[Create todos for all tasks]
-
-Task 1: Hook installation script
-
-[task-start plan 1 → brief read; BASE a1b2c3d]
-[Step 1: write failing test — written]
-[Step 2: run it — FAIL: install_hook not defined. Matches Expected.]
-[Step 3: implement — written]
-[Step 4: run it — PASS 1/1. Matches Expected.]
-[Step 5: commit — d4e5f6a]
-[Contract: tests ran, output read, no deviations]
-[task-done plan 1 a1b2c3d -- npm test -- hooks → ledger: Task 1: complete (commits a1b2c3d..d4e5f6a, tests: npm test -- hooks → 1/1 pass)]
-
-Task 2: Recovery modes
-
-[task-start plan 2 → brief read; BASE d4e5f6a]
-[Step 2: run failing test — FAIL, but on an import error: Task 1 exported
- installHook, brief consumes install_hook]
-[Ruling: brief's consumer name is a typo against Task 1's Produces block;
- use installHook — Ledger: Task 2: Ruling: install_hook → installHook — matches Task 1 Produces — cost if wrong: one rename]
-[Steps 2-5 as planned; commit b7c8d9e]
-[task-done plan 2 d4e5f6a -- npm test -- recovery → ledger: Task 2: complete (commits d4e5f6a..b7c8d9e, tests: npm test -- recovery → 8/8 pass)]
-
-...
-
-[After all tasks: review-package plan 9f8e7d6 HEAD; dispatch code-reviewer, model opus, with the invariants]
-Reviewer: read through line 812. Invariant holds (search evidence given). One Important finding — progress reporting interval hardcoded. Two Minor.
-[Re-grade: Important stands; both Minors enter the pass too]
-[Fix pass: test_progress_interval_configurable RED → extract PROGRESS_INTERVAL → GREEN; suite 12/12]
-[README usage example added; recovery.js split into verify.js/repair.js; suite 12/12; commit]
-[Ledger: Final: fixed hardcoded interval — test_progress_interval_configurable RED→GREEN, suite 12/12]
-[Ledger: Final: fixed README usage example — no behaviour change, suite 12/12]
-[Ledger: Final: fixed verify/repair split — no behaviour change, suite 12/12]
-[Ledger: Final review: fixes (commits e1f2a3b..c4d5e6f)]
-
-Rulings I made:
-- Task 2: install_hook → installHook (brief typo; cost if wrong: one rename)
-
-Plan: docs/superpowers/plans/feature-plan.md
-
-Using superpowers-ross:finishing-a-development-branch.
-```

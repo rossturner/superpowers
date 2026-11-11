@@ -106,7 +106,7 @@ Subagent (general-purpose):
 
 **Placeholders:**
 - `[MODEL]` — REQUIRED: the orchestrator's own model (`opus` or `sonnet`)
-- `[BRIEF_FILE]` — REQUIRED: the task brief file (`bash scripts/task-brief PLAN N` prints the path; same file the implementer worked from)
+- `[BRIEF_FILE]` — REQUIRED: the task brief file (`bash scripts/task-brief PLAN N`, run by its absolute path, from the working tree you're executing in, prints the path; same file the implementer worked from)
 - `[SPEC_FILE]` — the plan's Spec path; with no reachable spec, say so here and the reviewer works from the brief, constraints and invariants
 - `[GLOBAL_CONSTRAINTS]` — the binding requirements copied verbatim from the plan's Global Constraints section or the spec
 - `[INVARIANTS]` — the plan's Invariants section (or the workspace's `invariants.md`), verbatim, anchors included; `None` when there are none
@@ -114,6 +114,6 @@ Subagent (general-purpose):
 - `[REPORT_FILE]` — REQUIRED: the implementer's report file
 - `[BASE_SHA]` — commit before this task
 - `[HEAD_SHA]` — current commit
-- `[DIFF_FILE]` — REQUIRED: the path `bash scripts/review-package PLAN_FILE BASE HEAD` printed
+- `[DIFF_FILE]` — REQUIRED: the path `bash scripts/review-package PLAN_FILE BASE HEAD` printed (run by its absolute path, from the working tree you're executing in)
 
 **Reviewer returns:** the line it read through, the Spec Compliance verdict (✅/❌/⚠️) with file:line findings, and per-invariant search evidence.

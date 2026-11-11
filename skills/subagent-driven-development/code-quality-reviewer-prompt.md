@@ -110,6 +110,6 @@ Subagent (general-purpose):
 - `[REPORT_FILE]` — REQUIRED: the implementer's report file
 - `[BASE_SHA]` — commit before this task
 - `[HEAD_SHA]` — current commit
-- `[DIFF_FILE]` — REQUIRED: the path `bash scripts/review-package PLAN_FILE BASE HEAD` printed
+- `[DIFF_FILE]` — REQUIRED: the path `bash scripts/review-package PLAN_FILE BASE HEAD` printed (run by its absolute path, from the working tree you're executing in)
 
 **Reviewer returns:** the line it read through, Strengths, Issues (Critical/Important/Minor), Task quality verdict.

@@ -16,24 +16,44 @@ Before you reply, ask yourself: what do I know about what they want, and why?
 - **Everything that matters is in the request** ("make the icon cornflower blue"). This is a quick, clear task. Do it, and say what you did.
 - **Something non-trivial is missing.** Start the conversation.
 
+Before you start implementing, you must, in order:
+
+1. Lay out the approaches in a message of their own, and have your human partner pick one (see Lay out the approaches).
+2. Play the design back and get their approval of it (see Play It Back).
+3. Size the work (see Size the Work). For a project, write the design document and run the spec panel.
+4. For a project in software, invoke the superpowers-ross:writing-plans skill.
+
+If nothing is open when you write your first message and there's one sensible way, steps 1 and 2 happen in that message (see Your First Message).
+
+Two things aren't implementing: a spike they said yes to (see Spike to feel things out), and doing what they asked once they've opted out of the questions.
+
+## Look Before You Ask
+
+In an existing project, or when they've given you context (a spec, a plan, a handoff, files they pointed at, earlier conversation), dig in before your first message. Read what they referred to and the code or material it connects to, and keep reading until you can explain how the relevant parts work today and what this change would touch. Never ask what the project or their context already answers, or reopen what they've already decided.
+
 ## Your First Message
 
-Your first message is two things, in this order:
+Move the work forward, with one of these:
 
-1. One line letting them know that if they'd rather skip the questions and have you just start, they can say so. If they take you up on it, this skill is done: state any significant how-it-gets-made choice (platform, language, medium) in one plain line, then do what they asked through the normal workflow.
-2. One open question that gets them describing. Ask about a real moment or a concrete picture: "What's the moment you find yourself wishing this existed?" or "Tell me about the people who'll be in the room."
+- **They've already said what they want** (a spec, a plan, a detailed request): aim for about 200 words for the whole message. Echo their request back in your own words, so they can see whether you've got its shape: what they want, who it's for, and why, as far as they've said. Add what you found that bears on it: how the relevant parts work today and what the change would touch. If you found something they may not have considered that would change what they're asking for or how it has to be built, like a constraint, a conflict, or a cheaper path, say so plainly. How to build it comes later, once you understand what they want (see Lay out the approaches). End with one line inviting corrections. Then, if they haven't told you why they want it, even if you can guess, ask about that: one open question in their own terms, with nothing to pick from. If they have told you, and their request and the project leave open something whose answer would change what gets built, ask about the one that would change it most; when its choices can be named, sketch each concretely, with what it trades off and which you'd pick. If nothing like that is open, there's one sensible way: end with the short design itself (the approach, a line on why the others don't fit, and the design in a few lines) and ask them to approve it. Their approval covers the approach and the design: go on to Size the Work. Specs are often incomplete, so confirm before you build on one.
+- **They haven't:** one open question, in their own terms, about the biggest thing their request leaves unsettled. Say why you're asking: what the answer would change about what you build. For "a website for my bakery": "If it's mostly for people deciding whether to stop by, I'd lead with hours and what's in the case today; taking orders is a different site. What do you want someone to do when they land on it?"
+
+How the message ends depends on whether their message asked for brainstorming:
+
+- **They asked for it** (by name, by invoking it, or by asking for a design discussion): end there. They want this conversation.
+- **They didn't:** they may not want a conversation at all. End with a light, one-line offer to just get going instead, like "Or if you'd rather I just dive in, say so." If they take you up on it, this skill is done: state any significant how-it-gets-made choice (platform, language, medium) in one plain line, then do what they asked through the normal workflow.
 
 That's the whole message.
 
 ## The Conversation
 
-Each message ends with one question: a single sentence with no list of example answers hanging off it. Use plain language, pitched just a little above where your human partner is. Match their vocabulary; never use process jargon.
+Ask a question only when the answer would change what gets built and neither the request nor the project answers it. Otherwise, state your call and your reason as a proposal they can correct, and move the work forward. Process steps are always your calls: writing things up, where files go, looking further, how to show something. Do them and say so. Ask one at a time. Use plain language, pitched just a little above where your human partner is. Match their vocabulary; never use process jargon. You never need to quote this skill to your human partner.
 
 Be clear and concise. Lead with what matters. Avoid jargon. When you report what you found, give them the most important findings and offer the rest.
 
-**Get them describing.** Open questions come first. Their own words carry intent that your options can't. Offer a short menu only when they're stuck. When they say "just guess" or "what do you think?", propose something concrete.
+**Get them describing.** Until you know why they want it, ask open questions, with no example answers attached. Their own words carry intent that your options can't. Once you know why, when a decision has choices you can name, sketch each concretely, with what it trades off and which you'd pick. When they say "just guess" or "what do you think?", propose something concrete.
 
-**How it gets made.** Every project rests on choices about medium, tools, materials, and resources: the platform, programming language, and libraries for an app; the medium for a piece of art. Find out early which of those choices they want to make, which they're handing to you, and what they already have to work with. Someone with strong views or skills will want to talk it through. Someone counting on you needs sensible defaults, said in plain words. When there's existing work, build on what it already uses. Any choice you make goes in the design as your call, never as something they agreed to.
+**How it gets made.** Every project rests on choices about medium, tools, materials, and resources: the platform, programming language, and libraries for an app; the medium for a piece of art. Read from how they talk which of those choices they want to make. Someone who raises the how or asks about trade-offs wants the options with your pick. Someone who talks about outcomes is handing you the how: make those calls and state each in a line. When there's existing work, build on what it already uses. Any choice you make goes in the design as your call, never as something they agreed to.
 
 **Ground to cover.** This is territory, not a script. Never read these out as questions:
 
@@ -44,13 +64,13 @@ Be clear and concise. Lead with what matters. Avoid jargon. When you report what
 - current state: what exists now, what they've tried
 - the details they care about
 
-**Questions that work** anchor in specifics: "Walk me through the last time...", "If it could only do one of these well, which?", "What would make you wince if I got it wrong?" A guess they can correct ("I'm guessing this is because X keeps biting you?") often beats a question.
+**Make every question specific** to their project and what they've told you. Ask Socratically, the way a sharp colleague would: build each question on their last answer or on something you found, so it helps them think through a consequence or a case they may have missed ("Voting closes before the meeting, and two members joined this month. Does someone who joins mid-round get a vote?"). When the reason isn't already plain, say what you're hoping to learn or what the answer would change. A proposal they can correct, plus your reason for it, often beats a question.
 
-**Go look.** Once you have a bit of grounding and looking would help, go look without asking first: read their codebase or project, and search the web. Read files outside the project only where they've pointed you to them. Then say briefly what you looked for and what you found.
+**Do recon.** Once you have a bit of grounding and looking further would help, go look without asking first: deeper into their codebase or project, their own files and data, or the web. Read files outside the project only where they've pointed you to them. Then say briefly what you looked for and what you found.
 
-**Think wide privately.** Before you propose anything, come up with several ideas and drop the weak ones, including any that fight what they've told you about why. Show the comparison only when it helps them decide.
+**Lay out the approaches.** Once you understand what they want, and before you write anything up, put the ways of building it in a message of its own. Come up with several real alternatives and drop the weak ones, including any that work against why they want it and any the existing work rules out. Sketch the two or three that remain concretely enough to picture, grounded in what the project actually does, with what each trades off. Recommend one and say why, then ask which way they want to go; if they've handed you the how, say you'll go with your pick instead. When there's genuinely one sensible way, say so in that message and explain why the others don't fit; the design comes in the next one. This is for how it gets built; for what they want, get them describing first.
 
-**Show, don't tell.** Offer the visual companion (below) whenever seeing would help more than reading:
+**Show, don't tell.** Whenever seeing would help more than reading, sketch it in text: a few lines of what they'd see. Offer the visual companion (below) when the look itself is theirs to decide:
 
 - something they'll look at: a screen, a page, a printout, a sign
 - a layout or arrangement: of a screen, a room, a schedule
@@ -66,19 +86,21 @@ Once they've accepted, use it for mockups to react to, side-by-side options, and
 
 Play back as you go. As soon as you understand one part well enough to describe it (what it's for and who it serves, say, or how one piece behaves), describe that part back in about 200-300 words, then return to questions about the next part. Playback and questions alternate through the whole conversation; the last chunk covers whatever is left.
 
-Mark anything you're guessing as your guess; only what they said goes in as theirs. End each chunk by asking what's wrong or missing. Once every part has been played back and corrected, their yes approves the design.
+Only what they said goes in as theirs. Anything you filled in goes in as your proposal, with your reason. End each chunk by asking what's wrong or missing. Once every part has been played back and corrected, their yes approves the design.
 
-Before you send a chunk, check it: does it describe something they'll look at, like a page, a screen, a schedule, or a printout? If so, and they haven't seen the visual companion offer yet, send the offer instead (its own message, below) and hold the chunk for the next message. Once they've accepted, put a mockup next to the description.
+Before you send a chunk, check it: does it describe something they'll look at, like a page, a screen, a schedule, or a printout? If so, put a text sketch next to the description. If the look itself is theirs to decide and they haven't seen the visual companion offer yet, send the offer instead (its own message, below) and hold the chunk for the next message. Once they've accepted, put a mockup next to the description.
 
 ## Size the Work
 
-Once you understand what they want, pick a size and say it in plain words. They can override it.
+Once you understand what they want and they've picked an approach, pick a size and say it in plain words. They can override it.
 
 | Size | The full description | Then |
 |------|----------------------|------|
 | A quick, clear task | the request itself | do it |
 | A small change | in chat | build it through the normal workflow |
 | A project with a written design | played back in chat, recorded in a written design document | a full plan (for software: superpowers-ross:writing-plans) |
+
+The written design has an **Approaches** part: the two or three ways you considered building it, what each trades off, which one they picked, and why. They pick in the conversation, before you write the document.
 
 If it grows mid-task, stop, say so, and step up a size.
 
@@ -91,6 +113,7 @@ For a project, once they've approved the design, write a plain document a talent
 - intent and the why
 - goals, non-goals, anti-goals
 - constraints
+- approaches (above)
 - the parts of the how they decided, as they decided them
 - what's left to the builder
 
@@ -124,8 +147,9 @@ After a project's design is approved, write the document and run the panel; the 
 
 | Thought | Reality |
 |---------|---------|
-| "I'll offer options to save them effort" | Options steer. Ask them to describe it first. |
+| "I'll offer a menu of what they might want" | Options steer. Ask them to describe it first. |
 | "I'll fill in sensible defaults" | Good. Say them out loud. A default they never heard is one they couldn't reject. |
+| "I've answered their questions, so I'll play the design back" | Lay out the approaches first, in a message of their own (or, when nothing was open from the start, in your first message's short design). |
 | "I should explain the process first" | Ask your question. The process shows itself. |
 | "They said 'sounds good' to the idea" | Approval covers what you showed them. A part you haven't played back isn't approved. |
 | "I'll ask them to look over the document" | They approved the design when you played it back. Report your calls and move on. |

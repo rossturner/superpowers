@@ -68,6 +68,39 @@ for f in "$SDD" "$NATIVE"; do
     check_has "$f" 'invariants\.md' "$name: writes invariants for plans without them"
     check_has "$f" 'not fixed — ' "$name: an unfixed final finding needs a ruling"
 done
+SDDREF=skills/subagent-driven-development/references
+NATIVEREF=skills/executing-plans/references
+for f in batching cannot-verify dispatching final-review fix-loop handling-reports model-selection plan-invariants preflight resuming task-review; do
+    [ -f "$SDDREF/$f.md" ] && pass "SDD references/$f.md exists" || fail "SDD references/$f.md exists"
+    check_has "$SDD" "references/$f\\.md" "SDD SKILL.md points at references/$f.md"
+done
+for f in final-review ladder plan-invariants; do
+    [ -f "$NATIVEREF/$f.md" ] && pass "executing-plans references/$f.md exists" || fail "executing-plans references/$f.md exists"
+    check_has "$NATIVE" "references/$f\\.md" "executing-plans SKILL.md points at references/$f.md"
+done
+check_has "$SDDREF/fix-loop.md" 'Ruling: regraded' "SDD fix loop regrades spec and invariant breaches"
+check_has "$SDDREF/fix-loop.md" 'fix round <R>/5' "SDD fix loop caps at five rounds"
+check_has "$SDDREF/fix-loop.md" 'minor \(deferred\)' "SDD fix loop defers remaining Minors"
+check_has "$SDDREF/final-review.md" '3 waves at most' "SDD final review runs up to three fix waves"
+check_has "$SDDREF/final-review.md" 'not fixed — ' "SDD final review: an unfixed item needs a ruling"
+check_has "$SDDREF/final-review.md" 'Do not delete this plan.s workspace' "SDD leaves the workspace for finishing"
+check_lacks "$SDDREF/final-review.md" 'so it can triage|merge-base main|MERGE_BASE|rm -rf' "SDD final review carries no upstream triage, merge-base or workspace deletion"
+check_has "$SDDREF/handling-reports.md" 'Ruling: abandoned' "SDD BLOCKED ladder ends in abandoning"
+check_lacks "$SDDREF/handling-reports.md" 'break it into smaller pieces' "SDD BLOCKED ladder is the fork's"
+check_has "$SDDREF/task-review.md" 'read through line' "SDD reviewers state how far they read"
+check_has "$SDDREF/model-selection.md" "orchestrator's own model" "SDD model selection puts reviewers on the orchestrator's model"
+check_lacks "$SDDREF/model-selection.md" '1-2 files' "SDD model selection reference ignores file count"
+check_has "$SDDREF/plan-invariants.md" 'anchor' "SDD invariants carry search anchors"
+check_has "$NATIVEREF/final-review.md" 'no behaviour change' "Native final review verifies no-behaviour fixes by a green suite"
+check_has "$NATIVEREF/final-review.md" 'not fixed — ' "Native final review: an unfixed finding needs a ruling"
+check_has "$NATIVEREF/final-review.md" 'opus' "Native final review runs on opus"
+check_lacks "$NATIVEREF/final-review.md" 'never enter[[:space:]]+the fix pass|Minors never enter|merge-base main|MERGE_BASE' "Native final review fixes Minors and cuts from Base:"
+check_has "$NATIVEREF/ladder.md" 'Ruling: abandoned' "Native ladder ends in abandoning"
+if grep -rqiE 'stop and ask|stop only|using-git-worktrees' "$SDDREF" "$NATIVEREF"; then
+    fail "reference files never stop to ask and never mention worktrees"
+else
+    pass "reference files never stop to ask and never mention worktrees"
+fi
 check_lacks "$SDD" '1-2 files' "SDD model selection ignores file count"
 [ -f skills/subagent-driven-development/spec-reviewer-prompt.md ] && pass "spec-reviewer-prompt.md exists" || fail "spec-reviewer-prompt.md exists"
 [ -f skills/subagent-driven-development/code-quality-reviewer-prompt.md ] && pass "code-quality-reviewer-prompt.md exists" || fail "code-quality-reviewer-prompt.md exists"

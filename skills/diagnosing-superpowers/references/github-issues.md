@@ -30,10 +30,10 @@ gh issue create --repo rossturner/superpowers --title "<title>" --body-file <pat
 
 GitHub drops labels silently when the reporter lacks push access, so the labels land only for collaborators; the template footer still marks the issue as skill-filed. `gh` cannot attach files: give your partner the bundle path to attach through the browser after the issue exists.
 
-Without `gh`, hand over a prefilled link on the `diagnosis_report.md` template, which applies both labels for any reporter:
+Without `gh`, hand over a prefilled link on the `bug_report.md` template, which applies the `bug` label for any reporter:
 
 ```
-https://github.com/rossturner/superpowers/issues/new?template=diagnosis_report.md&title=<url-encoded title>&body=<url-encoded body>
+https://github.com/rossturner/superpowers/issues/new?template=bug_report.md&title=<url-encoded title>&body=<url-encoded body>
 ```
 
 GitHub rejects URLs over about 8,000 characters; past that, send the link with the title only and tell your partner to paste the body from the file.
